@@ -47,27 +47,6 @@ public:
     }
 };
 
-class Movement : public Vector {
-private:
-public:
-    Movement() = default;
-    Movement(double length, double degree)
-        : Vector()
-    {
-        _data = length;
-        _deg = degree;
-    }
-    Movement(Velocity v1, Velocity v2, double divT)
-        : Vector()
-    {
-        double Xx = (v1.returnVx().returnData() + v2.returnVx().returnData()) / 2 * divT;
-        double Xy = (v1.returnVy().returnData() + v2.returnVy().returnData()) / 2 * divT;
-        _data = sqrt(Xx * Xx + Xy * Xy);
-        _deg = atan(Xy / Xx) / Pi * 180;
-        fixing();
-    }
-};
-
 class Force : public Vector {
 private:
 public:
@@ -84,9 +63,9 @@ public:
         _data = rhs.returnData();
         _deg = rhs.returnDegree();
     }
-    [[nodiscard]] inline Velocity toAddition(double mass, double divT) const
+    [[nodiscard]] inline Velocity toAddition(double mass, double step) const
     {
-        return { _data / mass * divT, _deg };
+        return { _data / mass * step, _deg };
     }
     static inline Force fromField(const _single_Field& rhs, double d)
     {
@@ -136,18 +115,13 @@ public:
             }
             if ((x >= it.second._x1) && (y >= it.second._y1)
                 && (x <= it.second._x2) && (y <= it.second._y2)) {
-                ans = Force(ans + Force::fromField(it.first, q));
+                ans = Force(ans + Force::fromField(it.second, q));
             }
         }
         for (auto it : magFields) {
             if ((x >= it.x1) && (y >= it.y1)
                 && (x <= it.x2) && (y <= it.y2)) {
                 ans = Force(ans + Force::fromMagField(it, v, q));
-                debug("vDeg", v.returnDegree());
-                debug("vData", v.returnData());
-                debug("mFDeg", Force::fromMagField(it, v, q).returnDegree());
-                debug("mFData", Force::fromMagField(it, v, q).returnData());
-                debug("ansDeg", ans.returnDegree());
             }
         }
         return ans;
@@ -159,6 +133,7 @@ private:
     double _m {}, _q {};
     std::pair<double, double> _pos;
     Velocity _v {};
+    Force _f {};
 
 public:
     Object() = default;
@@ -169,23 +144,23 @@ public:
         _pos = { x, y };
         _v = v;
     }
-    void move(double divT) // divT/s
+    void move(double step) // step/s
     {
+        // debug("vDeg", _v.returnDegree());
+        // debug("Vx", _v.returnVx().returnData());
+        // debug("Vy", _v.returnVy().returnData());
         auto v0 = _v;
-        auto _f = FieldManager::getInstance().calcForce(_pos.first, _pos.second, _m, _q, _v);
-        debug("v0Deg", v0.returnDegree());
-        debug("v0Data", v0.returnData());
-        debug("v0xData", v0.returnVx().returnData());
-        debug("v0yData", v0.returnVy().returnData());
-        auto v1 = Velocity(_v + _f.toAddition(_m, divT));
-        debug("v1Deg", v1.returnDegree());
-        debug("v1Data", v1.returnData());
-        debug("v1xData", v1.returnVx().returnData());
-        debug("v1yData", v1.returnVy().returnData());
-        Movement x(v0, v1, divT);
-        _pos.first += x.returnVx().returnData();
-        _pos.second += x.returnVy().returnData();
+        auto tmp = Force(FieldManager::getInstance().calcForce(_pos.first, _pos.second, _m, _q, _v) / 2);
+        auto v1 = Velocity(_v + Force((tmp + _f) / 2).toAddition(_m, step));
+        auto vAve = Velocity((v0 + v1) / 2);
+        auto xMove = vAve.returnVx().returnData() * step;
+        auto yMove = vAve.returnVy().returnData() * step;
+        _pos.first += xMove;
+        // debug("xMove", xMove);
+        _pos.second += yMove;
+        // debug("yMove", yMove);
         _v = v1;
+        _f = tmp;
     }
     [[nodiscard]] auto returnPos() const
     {

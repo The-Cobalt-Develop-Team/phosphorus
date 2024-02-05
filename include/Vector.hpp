@@ -26,12 +26,13 @@
 #include <string>
 
 constexpr double Pi = 3.1415926535897932384626;
-#if DEBUG
-void debug(const std::string& src, const double& msg)
+
+inline void debug(const std::string& src, const double& msg)
 {
+#if DEBUG
     std::cerr << src << ":" << msg << std::endl;
-}
 #endif
+}
 class Vector {
 protected:
     double _data, _deg;
@@ -83,7 +84,11 @@ public:
     {
         auto Vx = lhs.returnVx()._data + rhs.returnVx()._data;
         auto Vy = lhs.returnVy()._data + rhs.returnVy()._data;
-        return { std::sqrt(std::pow(Vx, 2) + std::pow(Vy, 2)), std::atan(Vy / Vx) / Pi * 180 };
+        auto deg = std::atan(Vy / Vx) / Pi * 180;
+        if (Vx < 0) {
+            deg += 180;
+        }
+        return { std::sqrt(std::pow(Vx, 2) + std::pow(Vy, 2)), deg };
     }
     Vector operator+(const Vector& rhs) const
     {
