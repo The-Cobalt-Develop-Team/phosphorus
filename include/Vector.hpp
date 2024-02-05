@@ -18,29 +18,44 @@
 
 #ifndef VECTOR_H
 #define VECTOR_H
+#define DEBUG 1
 
 #include <algorithm>
 #include <cmath>
+#include <iostream>
+#include <string>
 
 constexpr double Pi = 3.1415926535897932384626;
-
+#if DEBUG
+void debug(const std::string& src, const double& msg)
+{
+    std::cerr << src << ":" << msg << std::endl;
+}
+#endif
 class Vector {
 protected:
     double _data, _deg;
 
 public:
     Vector() = default;
-    Vector(double data, double degree)
+    inline void fixing()
+    {
+        if (_data < 0) {
+            _deg = 180 + _deg;
+            _data = -_data;
+        }
+        while (_deg > 180) {
+            _deg -= 360;
+        }
+        while (_deg < -180) {
+            _deg += 360;
+        }
+    }
+    Vector(double data, double degree) noexcept
     {
         _data = data;
         _deg = degree;
-    }
-    void fixing()
-    {
-        if (_data < 0) {
-            _deg = 360. - _deg;
-            _data = -_data;
-        }
+        fixing();
     }
     [[nodiscard]] inline double returnData() const
     {
@@ -52,24 +67,23 @@ public:
     }
     [[nodiscard]] inline Vector returnVx() const // Maybe need to be optimized
     {
-        Vector tmp = { _data * std::cos(_deg / 180 * Pi), 0 };
-        tmp.fixing();
+        Vector tmp {};
+        tmp._data = _data * std::cos(_deg / 180 * Pi);
+        tmp._deg = 0;
         return tmp;
     }
     [[nodiscard]] inline Vector returnVy() const // Maybe need to be optimized
     {
-        Vector tmp = { _data * std::sin(_deg / 180 * Pi), 90 };
-        tmp.fixing();
+        Vector tmp {};
+        tmp._data = _data * std::sin(_deg / 180 * Pi);
+        tmp._deg = 90;
         return tmp;
     }
     [[nodiscard]] static Vector mix_vertexes(const Vector& lhs, const Vector& rhs)
     {
-        return {
-            std::sqrt(
-                std::pow(lhs.returnVx()._data + rhs.returnVx()._data, 2)
-                + std::pow(lhs.returnVy()._data + rhs.returnVy()._data, 2)),
-            std::atan((lhs.returnVy()._data + rhs.returnVy()._data) / lhs.returnVx()._data + rhs.returnVx()._data) / Pi * 180
-        };
+        auto Vx = lhs.returnVx()._data + rhs.returnVx()._data;
+        auto Vy = lhs.returnVy()._data + rhs.returnVy()._data;
+        return { std::sqrt(std::pow(Vx, 2) + std::pow(Vy, 2)), std::atan(Vy / Vx) / Pi * 180 };
     }
     Vector operator+(const Vector& rhs) const
     {
@@ -95,7 +109,5 @@ public:
     {
         return { _data / rhs, _deg };
     }
-    Vector& operator=(const Vector& rhs)
-        = default;
 };
 #endif

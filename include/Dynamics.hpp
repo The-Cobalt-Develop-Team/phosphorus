@@ -22,6 +22,7 @@
 #include "Vector.hpp"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <vector>
 
 namespace Phosphorus {
@@ -35,12 +36,14 @@ public:
     {
         _data = rhs.returnData();
         _deg = rhs.returnDegree();
+        this->fixing();
     }
     Velocity(double speed, double degree)
         : Vector()
     {
         _data = speed;
         _deg = degree;
+        this->fixing();
     }
 };
 
@@ -61,6 +64,7 @@ public:
         double Xy = (v1.returnVy().returnData() + v2.returnVy().returnData()) / 2 * divT;
         _data = sqrt(Xx * Xx + Xy * Xy);
         _deg = atan(Xy / Xx) / Pi * 180;
+        fixing();
     }
 };
 
@@ -124,7 +128,7 @@ public:
     }
     Force calcForce(double x, double y, double m, double q, const Velocity& v)
     {
-        Force ans;
+        Force ans(0, 0);
         for (const auto& it : fields) {
             if ((x >= it.first._x1) && (y >= it.first._y1)
                 && (x <= it.first._x2) && (y <= it.first._y2)) {
@@ -139,6 +143,11 @@ public:
             if ((x >= it.x1) && (y >= it.y1)
                 && (x <= it.x2) && (y <= it.y2)) {
                 ans = Force(ans + Force::fromMagField(it, v, q));
+                debug("vDeg", v.returnDegree());
+                debug("vData", v.returnData());
+                debug("mFDeg", Force::fromMagField(it, v, q).returnDegree());
+                debug("mFData", Force::fromMagField(it, v, q).returnData());
+                debug("ansDeg", ans.returnDegree());
             }
         }
         return ans;
@@ -164,7 +173,15 @@ public:
     {
         auto v0 = _v;
         auto _f = FieldManager::getInstance().calcForce(_pos.first, _pos.second, _m, _q, _v);
+        debug("v0Deg", v0.returnDegree());
+        debug("v0Data", v0.returnData());
+        debug("v0xData", v0.returnVx().returnData());
+        debug("v0yData", v0.returnVy().returnData());
         auto v1 = Velocity(_v + _f.toAddition(_m, divT));
+        debug("v1Deg", v1.returnDegree());
+        debug("v1Data", v1.returnData());
+        debug("v1xData", v1.returnVx().returnData());
+        debug("v1yData", v1.returnVy().returnData());
         Movement x(v0, v1, divT);
         _pos.first += x.returnVx().returnData();
         _pos.second += x.returnVy().returnData();

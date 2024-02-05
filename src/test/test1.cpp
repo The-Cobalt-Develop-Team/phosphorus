@@ -7,12 +7,14 @@ using namespace Phosphorus;
 int main()
 {
     freopen("result1.csv", "w", stdout);
+    freopen("result1.log", "w", stderr);
     cout << "x,y" << endl;
-    Object a(1, 0.1, 0, 0, { 1000, 0 });
-    // FieldManager::getInstance().addField({ _single_Field(10, 270), _single_Field(0, 0) });
-    FieldManager::getInstance().addMagField({ false, 1000 });
-    for (int i = 1; i <= 1000; i++) {
-        a.move(0.0001);
+    Object a(1, 10, 0, 0, { 10, 0 });
+    cout << a.returnPos().first << ',' << a.returnPos().second << endl;
+    // FieldManager::getInstance().addField({ _single_Field(10, -90), _single_Field(0, 0) });
+    FieldManager::getInstance().addMagField({ false, 10 });
+    for (int i = 1; i <= 300000; i++) {
+        a.move(0.00001);
         cout << a.returnPos().first << ',' << a.returnPos().second << endl;
     }
 }
