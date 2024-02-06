@@ -20,7 +20,7 @@ else(${CMAKE_BUILD_TYPE} STREQUAL RELEASE)
     message("Optional:-fno-asm -std=c++17 -Wall -Ofast, Type:Release")
 endif(${CMAKE_BUILD_TYPE} STREQUAL DEBUG)
 
-include_directories(include/)
+include_directories(include/ include/JSONResolver)
 add_subdirectory(src/)
 
 # Install options

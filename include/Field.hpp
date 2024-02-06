@@ -58,17 +58,26 @@ class MagField {
 public:
     bool _dir = false; // False is in, True is out.
     double _b {};
-    double x1 {}, y1 {}, x2 {}, y2 {};
+    double _x1 {}, _y1 {}, _x2 {}, _y2 {};
 
     MagField() = default;
     MagField(bool direct, double B)
     {
         _dir = direct;
         _b = B;
-        x1 = -1000000;
-        y1 = -1000000;
-        x2 = 1000000;
-        y2 = 1000000;
+        _x1 = -1000000;
+        _y1 = -1000000;
+        _x2 = 1000000;
+        _y2 = 1000000;
+    }
+    MagField(double x1, double y1, double x2, double y2, bool direct, double B)
+    {
+        _dir = direct;
+        _b = B;
+        _x1 = x1;
+        _y1 = y1;
+        _x2 = x2;
+        _y2 = y2;
     }
 };
 }

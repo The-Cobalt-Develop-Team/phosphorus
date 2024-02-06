@@ -119,8 +119,8 @@ public:
             }
         }
         for (auto it : magFields) {
-            if ((x >= it.x1) && (y >= it.y1)
-                && (x <= it.x2) && (y <= it.y2)) {
+            if ((x >= it._x1) && (y >= it._y1)
+                && (x <= it._x2) && (y <= it._y2)) {
                 ans = Force(ans + Force::fromMagField(it, v, q));
             }
         }
