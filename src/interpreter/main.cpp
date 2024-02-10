@@ -52,10 +52,10 @@ void execute()
             }
         }
     }
-    std::cout << a.returnPos().first << ' ' << a.returnPos().second << std::endl;
+    std::cout << a.returnPos().first << ',' << a.returnPos().second << std::endl;
     for (int i = 1; i <= config["simulation"]["count"]; i++) {
         a.move(config["simulation"]["step"]);
-        if (i % int(config["simulation"]["sStep"]) == 1) {
+        if (config["simulation"]["sStep"] == 1 || (i % int(config["simulation"]["sStep"]) == 1)) {
             std::cout << a.returnPos().first << ',' << a.returnPos().second << std::endl;
         }
     }
