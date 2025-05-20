@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.30)
+project(phosphorus LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+include(cmake/CMakeUtilities.cmake)
+
+set(PHOSPHORUS_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
+set(PHOSPHORUS_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(PHOSPHORUS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(PHOSPHORUS_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/test")
+set(PHOSPHORUS_EXAMPLES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/examples")
+
+phosphorus_option(PHOSPHORUS_BUILD_TESTS "Build tests" ON)
+phosphorus_option(PHOSPHORUS_BUILD_EXAMPLES "Build examples" ON)
+
+add_subdirectory("${PHOSPHORUS_SOURCE_DIR}")
