@@ -14,11 +14,19 @@
 
 namespace phosphorus {
 
+template <typename Field>
+concept IsField = requires {
+  typename Field::CoordinateVec;
+  typename Field::Vector;
+  // Currently the force method cannot be checked because it is a
+  // template method with constraints.
+};
+
 /**
  * @brief The template base class for a force field.
  * @tparam Impl The implementation of the force field.
  */
-template <typename Impl, typename Coord = typename Impl::CoordinateType>
+template <typename Impl, typename Coord = typename Impl::CoordinateVecType>
 class BaseField {
 public:
   using CoordinateVec = Coord;
@@ -67,6 +75,66 @@ template <typename Func>
 LambdaField(Func) -> LambdaField<
     std::remove_cv_t<typename function_traits<Func>::first_argument_type>,
     std::remove_cv_t<typename function_traits<Func>::second_argument_type>>;
+
+template <typename LHS, typename RHS>
+  requires std::same_as<typename LHS::CoordinateVec,
+                        typename RHS::CoordinateVec>
+class CompositeField
+    : public BaseField<CompositeField<LHS, RHS>, typename LHS::CoordinateVec> {
+public:
+  using CoordinateVecType = typename LHS::CoordinateVec;
+  using Vector = typename CoordinateVecType::Vector;
+
+  CompositeField(const LHS &lhs, const RHS &rhs) : lhs_(lhs), rhs_(rhs) {}
+
+  template <typename ParticleType>
+  Vector force(const CoordinateVecType &coord,
+               const ParticleType &particle) const {
+    return lhs_.force(coord, particle) + rhs_.force(coord, particle);
+  }
+
+private:
+  LHS lhs_;
+  RHS rhs_;
+};
+
+template <typename Field>
+class NegativeField
+    : public BaseField<NegativeField<Field>, typename Field::CoordinateVec> {
+public:
+  using CoordinateVecType = typename Field::CoordinateVec;
+  using Vector = typename CoordinateVecType::Vector;
+
+  explicit NegativeField(const Field &field) : field_(field) {}
+
+  template <typename ParticleType>
+  Vector force(const CoordinateVecType &coord,
+               const ParticleType &particle) const {
+    return -field_.force(coord, particle);
+  }
+
+private:
+  Field field_;
+};
+
+template <typename LHS, typename RHS>
+  requires IsField<LHS> && IsField<RHS>
+auto operator+(const LHS &lhs, const RHS &rhs) -> CompositeField<LHS, RHS> {
+  return CompositeField<LHS, RHS>(lhs, rhs);
+}
+
+template <typename Operand>
+  requires IsField<Operand>
+auto operator-(const Operand &operand) -> NegativeField<Operand> {
+  return NegativeField<Operand>(operand);
+}
+
+template <typename LHS, typename RHS>
+  requires IsField<LHS> && IsField<RHS>
+auto operator-(const LHS &lhs, const RHS &rhs)
+    -> CompositeField<LHS, NegativeField<RHS>> {
+  return lhs + (-rhs);
+}
 
 } // namespace phosphorus
 
