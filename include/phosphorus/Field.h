@@ -15,17 +15,17 @@
 namespace phosphorus {
 
 /**
- * The template base class for a force field.
+ * @brief The template base class for a force field.
  * @tparam Impl The implementation of the force field.
  */
 template <typename Impl, typename Coord = typename Impl::CoordinateType>
 class BaseField {
 public:
-  using Coordinate = Coord;
-  using Vector = typename Coordinate::Vector;
+  using CoordinateVec = Coord;
+  using Vector = typename CoordinateVec::Vector;
 
   template <typename ParticleType>
-  Vector force(const Coordinate &pos, const ParticleType &particle) const {
+  Vector force(const CoordinateVec &pos, const ParticleType &particle) const {
     return static_cast<const Impl *>(this)->force(pos, particle);
   }
 };
@@ -38,24 +38,29 @@ concept ForceFunction = requires {
       typename CoordType::Vector>;
 };
 
+/**
+ * @brief A force field that is defined by a lambda function.
+ * @tparam Coord The coordinate system contains this field
+ * @tparam ParticleType The type of the particle
+ */
 template <typename Coord, typename ParticleType>
-  // requires IsCoordinate<Coord>
+  requires IsCoordinateVec<Coord>
 class LambdaField : public BaseField<LambdaField<Coord, ParticleType>, Coord> {
 public:
-  using CoordinateType = Coord;
-  using Vector = typename CoordinateType::Vector;
+  using CoordinateVecType = Coord;
+  using Vector = typename CoordinateVecType::Vector;
 
   template <typename Func>
-    requires ForceFunction<Func, CoordinateType, ParticleType>
+    requires ForceFunction<Func, CoordinateVecType, ParticleType>
   explicit LambdaField(Func &&force) : force_(std::forward<Func>(force)) {}
 
-  CoordinateType force(const CoordinateType &coord,
+  Vector force(const CoordinateVecType &coord,
                const ParticleType &particle) const {
     return force_(coord, particle);
   }
 
 private:
-  std::function<CoordinateType(const CoordinateType &, const ParticleType &)> force_;
+  std::function<Vector(const CoordinateVecType &, const ParticleType &)> force_;
 };
 
 template <typename Func>
