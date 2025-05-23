@@ -7,6 +7,9 @@
 
 // This is a placeholder header file for the Phosphorus library.
 
-namespace phosphorus {}
+#include "phosphorus/Vector.h"
+#include "phosphorus/Coordinate.h"
+#include "phosphorus/Field.h"
+#include "phosphorus/Particle.h"
 
 #endif // PHOSPHORUS_INCLUDE_PHOSPHORUS_PHOSPHORUS_H

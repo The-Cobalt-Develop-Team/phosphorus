@@ -16,3 +16,7 @@ phosphorus_option(PHOSPHORUS_BUILD_TESTS "Build tests" ON)
 phosphorus_option(PHOSPHORUS_BUILD_EXAMPLES "Build examples" ON)
 
 add_subdirectory("${PHOSPHORUS_SOURCE_DIR}")
+
+if (PHOSPHORUS_BUILD_TESTS)
+    add_subdirectory("${PHOSPHORUS_TEST_DIR}")
+endif ()
