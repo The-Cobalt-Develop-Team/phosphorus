@@ -73,8 +73,8 @@ class FieldVerletIntegrator
     : public BaseVerletIntegrator<
           FieldVerletIntegrator<Field, Coord, ParticleType>, Coord,
           ParticleType> {
-  friend BaseVerletIntegrator;
   using Base = BaseVerletIntegrator<FieldVerletIntegrator, Coord, ParticleType>;
+  friend Base;
 
 public:
   using Base::Base;
@@ -110,8 +110,8 @@ template <typename Coord, typename ParticleType>
 class GravityIntegrator
     : public BaseVerletIntegrator<GravityIntegrator<Coord, ParticleType>, Coord,
                                   ParticleType> {
-  friend BaseVerletIntegrator;
   using Base = BaseVerletIntegrator<GravityIntegrator, Coord, ParticleType>;
+  friend Base;
 
 public:
   using Base::Base;

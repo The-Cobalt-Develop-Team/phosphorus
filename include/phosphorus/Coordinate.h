@@ -175,7 +175,9 @@ public:
   }
 
 private:
-  [[nodiscard]] CartesianVector toCartesianImpl() const { return vector_; }
+  [[nodiscard]] CartesianVector toCartesianImpl() const {
+    return CartesianVector(vector_);
+  }
 
   static auto fromCartesianImpl(const CartesianVector &cartesian) {
     return Cartesian3D(cartesian);

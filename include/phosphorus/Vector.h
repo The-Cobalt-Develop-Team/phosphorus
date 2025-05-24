@@ -91,8 +91,8 @@ public:
     return result;
   }
 
-  Vector operator*(Scalar scalar) const {
-    auto result = *this;
+  friend Vector operator*(const Vector &lhs, Scalar scalar) {
+    Vector result = lhs;
     result *= scalar;
     return result;
   }
@@ -131,6 +131,9 @@ template <size_t kDimension, typename T = double>
 class EuclideanVector : public Vector<kDimension, T> {
 public:
   using Vector<kDimension, T>::Vector;
+
+  explicit EuclideanVector(const Vector<kDimension, T> &vector)
+      : Vector<kDimension, T>(vector) {}
 
   using Scalar = T;
 
