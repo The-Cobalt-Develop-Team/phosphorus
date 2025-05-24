@@ -57,7 +57,7 @@ public:
    * r \cos(\theta) e_x + r \sin(\theta)\f$. Then the Cartesian vector is
    * \f$(x, y)\f$.
    */
-  using CartesianVector = Vector<kDimension, Scalar>;
+  using CartesianVector = EuclideanVector<kDimension, Scalar>;
 
   /**
    * @brief The type of vector in the coordinate system.
@@ -117,6 +117,20 @@ public:
   friend bool operator==(const BaseCoordinateVec &lhs,
                          const BaseCoordinateVec &rhs) {
     return lhs.vector_ == rhs.vector_;
+  }
+
+  Impl &operator+=(const BaseCoordinateVec &rhs) {
+    vector_ += rhs.vector_;
+    return static_cast<Impl &>(*this);
+  }
+
+  auto operator+(const BaseCoordinateVec &rhs) const {
+    return Impl{vector_ + rhs.vector_};
+  }
+
+  Impl &operator+=(const Vector &rhs) {
+    this->vector_ += rhs;
+    return static_cast<Impl &>(*this);
   }
 
 protected:
