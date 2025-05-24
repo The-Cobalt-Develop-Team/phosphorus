@@ -7,6 +7,8 @@
 #include "phosphorus/Coordinate.h"
 #include "phosphorus/Field.h"
 #include "phosphorus/Particle.h"
+#include "phosphorus/SignalSlot.h"
 #include "phosphorus/TypeTraits.h"
 #include "phosphorus/Vector.h"
+#include "phosphorus/VerletIntegrator.h"
 #include "phosphorus/phosphorus.h"
