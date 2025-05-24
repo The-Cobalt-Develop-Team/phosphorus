@@ -95,6 +95,7 @@ TEST(FieldTest, FieldOperationWithModification) {
     explicit ModifiableField(double scalar) : scalar_(scalar) {}
 
     void setScalar(double scalar) { scalar_ = scalar; }
+    [[nodiscard]] double scalar() const { return scalar_; }
 
     [[nodiscard]] Vector evaluate(const CoordinateVecType &coord,
                                   const CommonParticle &particle) const {
@@ -111,19 +112,16 @@ TEST(FieldTest, FieldOperationWithModification) {
   CommonParticle particle{1.0, 2.0};
   Cartesian3D position{3.0, 4.0, 5.0};
   auto modified_force = composite_field.evaluate(position, particle);
-  auto expected_force = field.evaluate(position, particle) +
-                        modifiable_field.evaluate(position, particle);
+  auto expected_force =
+      position.toCartesian() * particle.mass() +
+      position.toCartesian() * particle.mass() * modifiable_field.scalar();
   EXPECT_EQ(modified_force, expected_force);
-  std::cout << "Modified force: " << modified_force << std::endl;
-  std::cout << "Expected force: " << expected_force << std::endl;
 
   modifiable_field.setScalar(4.0);
   auto modified_force2 = composite_field.evaluate(position, particle);
-  auto expected_force2 = field.evaluate(position, particle) +
-                         modifiable_field.evaluate(position, particle);
+  auto expected_force2 =
+      position.toCartesian() * particle.mass() +
+      position.toCartesian() * particle.mass() * modifiable_field.scalar();
   EXPECT_EQ(modified_force2, expected_force2);
   EXPECT_NE(modified_force, modified_force2);
-
-  std::cout << "Modified force2: " << modified_force2 << std::endl;
-  std::cout << "Expected force2: " << expected_force2 << std::endl;
 }
