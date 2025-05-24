@@ -127,6 +127,12 @@ protected:
   Scalar components_[kDimension];
 };
 
+template <typename... T>
+Vector(T...)
+    -> Vector<sizeof...(T),
+              std::conditional_t<std::conjunction_v<std::is_same<T, int>...>,
+                                 double, std::common_type_t<T...>>>;
+
 template <size_t kDimension, typename T = double>
 class EuclideanVector : public Vector<kDimension, T> {
 public:

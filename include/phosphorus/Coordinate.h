@@ -133,6 +133,10 @@ public:
     return static_cast<Impl &>(*this);
   }
 
+  auto operator+(const Vector &rhs) const {
+    return Impl{vector_ + rhs};
+  }
+
 protected:
   Vector vector_;
 };
