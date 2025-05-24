@@ -74,6 +74,19 @@ public:
   BaseCoordinateVec &operator=(const BaseCoordinateVec &) = default;
   BaseCoordinateVec &operator=(BaseCoordinateVec &&) = default;
 
+  explicit BaseCoordinateVec(const Vector &vector) : vector_(vector) {}
+
+  BaseCoordinateVec(std::initializer_list<Scalar> values) : vector_{values} {}
+
+  BaseCoordinateVec &operator=(std::initializer_list<Scalar> list) {
+    assert(list.size() == kDimension);
+    auto it = list.begin();
+    for (size_t i = 0; i < kDimension; ++i) {
+      vector_[i] = *it++;
+    }
+    return *this;
+  }
+
   /**
    * @brief Convert the coordinate to the corresponding Cartesian vector.
    * @return The vector in the corresponding Cartesian coordinate system.
@@ -91,7 +104,23 @@ public:
     return Impl::fromCartesianImpl(cartesian);
   }
 
+  /**
+   * @brief Get the raw vector in the coordinate system.
+   * @return The raw vector in the coordinate system.
+   */
+  [[nodiscard]] Vector toVector() const { return vector_; }
+
+  static auto fromVector(const Vector &vector) { return Impl(vector); }
+
   static constexpr size_t dimension() { return kDimension; }
+
+  friend bool operator==(const BaseCoordinateVec &lhs,
+                         const BaseCoordinateVec &rhs) {
+    return lhs.vector_ == rhs.vector_;
+  }
+
+protected:
+  Vector vector_;
 };
 
 // TODO: Implement a template for Cartesian coordinates
@@ -105,16 +134,13 @@ public:
   using BaseCoordinateVec::BaseCoordinateVec;
 
 private:
-  [[nodiscard]] CartesianVector toCartesianImpl() const { return {x_, y_}; }
-
-  static auto fromCartesianImpl(const CartesianVector &cartesian) {
-    Cartesian2D coord;
-    coord.x_ = cartesian[0];
-    coord.y_ = cartesian[1];
-    return coord;
+  [[nodiscard]] CartesianVector toCartesianImpl() const {
+    return CartesianVector(vector_);
   }
 
-  Scalar x_ = 0, y_ = 0;
+  static auto fromCartesianImpl(const CartesianVector &cartesian) {
+    return Cartesian2D(cartesian);
+  }
 };
 
 static_assert(IsCoordinateVec<Cartesian2D>, "Cartesian2D is not a coordinate");
@@ -126,39 +152,20 @@ class Cartesian3D : public BaseCoordinateVec<Cartesian3D, 3> {
 public:
   friend BaseCoordinateVec;
   using BaseCoordinateVec::BaseCoordinateVec;
+  using BaseCoordinateVec::operator=;
 
-  Cartesian3D(std::initializer_list<Scalar> list) {
-    assert(list.size() == 3);
-    auto it = list.begin();
-    x_ = *it++;
-    y_ = *it++;
-    z_ = *it;
-  }
-
-  bool operator==(const Cartesian3D &rhs) const {
-    return x_ == rhs.x_ && y_ == rhs.y_ && z_ == rhs.z_;
-  }
-
-  auto operator*(Scalar scalar) const {
-    return Cartesian3D{x_ * scalar, y_ * scalar, z_ * scalar};
-  }
+  auto operator*(Scalar scalar) const { return Cartesian3D{vector_ * scalar}; }
 
   friend auto operator*(Scalar scalar, const Cartesian3D &coord) {
     return coord * scalar;
   }
 
 private:
-  [[nodiscard]] CartesianVector toCartesianImpl() const { return {x_, y_, z_}; }
+  [[nodiscard]] CartesianVector toCartesianImpl() const { return vector_; }
 
   static auto fromCartesianImpl(const CartesianVector &cartesian) {
-    Cartesian3D coord;
-    coord.x_ = cartesian[0];
-    coord.y_ = cartesian[1];
-    coord.z_ = cartesian[2];
-    return coord;
+    return Cartesian3D(cartesian);
   }
-
-  Scalar x_ = 0, y_ = 0, z_ = 0;
 };
 
 static_assert(IsCoordinateVec<Cartesian3D>, "Cartesian3D is not a coordinate");
