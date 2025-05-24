@@ -74,10 +74,6 @@ public:
   BaseCoordinateVec &operator=(const BaseCoordinateVec &) = default;
   BaseCoordinateVec &operator=(BaseCoordinateVec &&) = default;
 
-  BaseCoordinateVec(std::initializer_list<Scalar> list) {
-    static_cast<Impl &>(*this) = BaseCoordinateVec::fromCartesian(list);
-  }
-
   /**
    * @brief Convert the coordinate to the corresponding Cartesian vector.
    * @return The vector in the corresponding Cartesian coordinate system.
@@ -130,6 +126,15 @@ class Cartesian3D : public BaseCoordinateVec<Cartesian3D, 3> {
 public:
   friend BaseCoordinateVec;
   using BaseCoordinateVec::BaseCoordinateVec;
+
+  Cartesian3D(std::initializer_list<Scalar> list) {
+    assert(list.size() == 3);
+    auto it = list.begin();
+    x_ = *it++;
+    y_ = *it++;
+    z_ = *it;
+  }
+
   bool operator==(const Cartesian3D &rhs) const {
     return x_ == rhs.x_ && y_ == rhs.y_ && z_ == rhs.z_;
   }

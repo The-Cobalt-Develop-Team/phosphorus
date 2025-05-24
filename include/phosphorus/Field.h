@@ -7,6 +7,7 @@
 
 #include "phosphorus/Coordinate.h"
 #include "phosphorus/Particle.h"
+#include "phosphorus/SignalSlot.h"
 #include "phosphorus/TypeTraits.h"
 #include <concepts>
 #include <functional>
@@ -33,8 +34,9 @@ public:
   using Vector = typename CoordinateVec::Vector;
 
   template <typename ParticleType>
-  Vector force(const CoordinateVec &pos, const ParticleType &particle) const {
-    return static_cast<const Impl *>(this)->force(pos, particle);
+  Vector evaluate(const CoordinateVec &pos,
+                  const ParticleType &particle) const {
+    return static_cast<const Impl *>(this)->evaluate(pos, particle);
   }
 };
 
@@ -60,15 +62,16 @@ public:
 
   template <typename Func>
     requires ForceFunction<Func, CoordinateVecType, ParticleType>
-  explicit LambdaField(Func &&force) : force_(std::forward<Func>(force)) {}
+  explicit LambdaField(Func &&force) : field_func_(std::forward<Func>(force)) {}
 
-  Vector force(const CoordinateVecType &coord,
-               const ParticleType &particle) const {
-    return force_(coord, particle);
+  Vector evaluate(const CoordinateVecType &coord,
+                  const ParticleType &particle) const {
+    return field_func_(coord, particle);
   }
 
 private:
-  std::function<Vector(const CoordinateVecType &, const ParticleType &)> force_;
+  std::function<Vector(const CoordinateVecType &, const ParticleType &)>
+      field_func_;
 };
 
 template <typename Func>
@@ -76,6 +79,15 @@ LambdaField(Func) -> LambdaField<
     std::remove_cv_t<typename function_traits<Func>::first_argument_type>,
     std::remove_cv_t<typename function_traits<Func>::second_argument_type>>;
 
+// TODO: We may need a more general composite field that can be modified.
+// Currently, the type of the field is fixed, and we cannot change it.
+// Thus, we must redefine the field type every time we want to change it.
+// This leads to a lot of memory allocation and deallocation.
+/**
+ * @brief A composite field that is the sum of two fields.
+ * @tparam LHS The LHS Field
+ * @tparam RHS The RHS Field
+ */
 template <typename LHS, typename RHS>
   requires std::same_as<typename LHS::CoordinateVec,
                         typename RHS::CoordinateVec>
@@ -88,14 +100,14 @@ public:
   CompositeField(const LHS &lhs, const RHS &rhs) : lhs_(lhs), rhs_(rhs) {}
 
   template <typename ParticleType>
-  Vector force(const CoordinateVecType &coord,
-               const ParticleType &particle) const {
-    return lhs_.force(coord, particle) + rhs_.force(coord, particle);
+  Vector evaluate(const CoordinateVecType &coord,
+                  const ParticleType &particle) const {
+    return lhs_.evaluate(coord, particle) + rhs_.evaluate(coord, particle);
   }
 
 private:
-  LHS lhs_;
-  RHS rhs_;
+  const LHS &lhs_;
+  const RHS &rhs_;
 };
 
 template <typename Field>
@@ -108,13 +120,13 @@ public:
   explicit NegativeField(const Field &field) : field_(field) {}
 
   template <typename ParticleType>
-  Vector force(const CoordinateVecType &coord,
-               const ParticleType &particle) const {
-    return -field_.force(coord, particle);
+  Vector evaluate(const CoordinateVecType &coord,
+                  const ParticleType &particle) const {
+    return -field_.evaluate(coord, particle);
   }
 
 private:
-  Field field_;
+  const Field &field_;
 };
 
 template <typename LHS, typename RHS>
