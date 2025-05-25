@@ -133,9 +133,20 @@ public:
     return static_cast<Impl &>(*this);
   }
 
-  auto operator+(const Vector &rhs) const {
-    return Impl{vector_ + rhs};
+  auto operator+(const Vector &rhs) const { return Impl{vector_ + rhs}; }
+
+  Impl &operator-=(const BaseCoordinateVec &rhs) { return operator+=(-rhs); }
+
+  auto operator-(const BaseCoordinateVec &rhs) const {
+    return Impl{vector_ - rhs.vector_};
   }
+
+  Impl &operator-=(const Vector &rhs) {
+    this->vector_ -= rhs;
+    return static_cast<Impl &>(*this);
+  }
+
+  auto operator-(const Vector &rhs) const { return Impl{vector_ - rhs}; }
 
 protected:
   Vector vector_;

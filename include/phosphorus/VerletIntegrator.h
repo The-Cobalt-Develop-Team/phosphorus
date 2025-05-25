@@ -35,9 +35,80 @@ public:
   using CoordinateVec = Coord;
   using Vector = typename CoordinateVec::Vector;
 
-  using iterator = typename std::vector<Element>::iterator;
+  // The vector<>::iterator may be invalidated when the vector is resized.
+  // So we need to use a custom iterator to avoid this problem.
+  class iterator {
+  private:
+    using vector_type = std::vector<Element>;
+    using vector_iter = typename vector_type::iterator;
 
-  // TODO: Maybe we should implement a iterator for particles
+  public:
+    using iterator_category = std::random_access_iterator_tag;
+    using value_type = Element;
+    using difference_type = std::ptrdiff_t;
+    using pointer = Element *;
+    using reference = Element &;
+
+    iterator(BaseVerletIntegrator *container, size_t index)
+        : container_(container), index_(index) {}
+
+    iterator(BaseVerletIntegrator *container, vector_iter iter)
+        : container_(container),
+          index_(std::distance(container->elements_.begin(), iter)) {}
+
+    reference operator*() const { return container_->elements_[index_]; }
+
+    pointer operator->() const { return &(container_->elements_[index_]); }
+
+    iterator &operator++() {
+      index_++;
+      return *this;
+    }
+    iterator operator++(int) {
+      auto tmp = *this;
+      ++(*this);
+      return tmp;
+    }
+    iterator &operator--() {
+      index_--;
+      return *this;
+    }
+    iterator operator--(int) {
+      auto tmp = *this;
+      --(*this);
+      return tmp;
+    }
+    iterator &operator+=(difference_type n) {
+      index_ += n;
+      return *this;
+    }
+    iterator &operator-=(difference_type n) {
+      index_ -= n;
+      return *this;
+    }
+    iterator operator+(difference_type n) const {
+      return iterator(container_, index_ + n);
+    }
+    iterator operator-(difference_type n) const {
+      return iterator(container_, index_ - n);
+    }
+    difference_type operator-(const iterator &other) const {
+      return index_ - other.index_;
+    }
+
+    bool operator==(const iterator &other) const {
+      return index_ == other.index_;
+    }
+    bool operator!=(const iterator &other) const { return !(*this == other); }
+    bool operator<(const iterator &other) const {
+      return index_ < other.index_;
+    }
+
+  private:
+    BaseVerletIntegrator *container_;
+    size_t index_;
+  };
+
   /**
    * @brief Push a particle into the integrator.
    * @param particle The particle to be added.
@@ -49,9 +120,7 @@ public:
                     const CoordinateVec &position = CoordinateVec(),
                     const Vector &velocity = Vector()) {
     elements_.emplace_back(particle, position, velocity, Vector());
-    auto it = std::prev(elements_.end());
-    elements_.back().acceleration = this->calculateAcceleration(it);
-    return it;
+    return std::prev(this->end());
   }
 
   // TODO: First step should be handled separately
@@ -61,6 +130,7 @@ public:
 
     // Use static storage to avoid dynamic allocation
     static std::vector<Vector> acc(n);
+    static bool first_step = true;
 
     // Resize the static storage if needed
     // Because we do not support removing particles, we can assume that
@@ -71,9 +141,14 @@ public:
 
     // Calculate acceleration
     auto it = acc.begin();
-    for (auto elem_it = elements_.begin(); elem_it != elements_.end();
+    for (auto elem_it = this->begin(); elem_it != this->end();
          ++elem_it, ++it) {
       *it = this->calculateAcceleration(elem_it);
+      if (first_step) {
+        // If this is the first step, we need to set the initial acceleration
+        // to the current acceleration
+        elem_it->acceleration = *it;
+      }
     }
 
     // Update positions and velocities
@@ -85,20 +160,28 @@ public:
       elem.acceleration = *it;
       ++it;
     }
+
+    first_step = false;
   }
 
   auto count() const { return elements_.size(); }
   auto size() const { return elements_.size(); }
 
-  // Iterators for the elements
-  auto begin() { return elements_.begin(); }
-  auto end() { return elements_.end(); }
-  auto begin() const { return elements_.begin(); }
-  auto end() const { return elements_.end(); }
+  // Access the elements
+  auto operator[](size_t index) { return elements_[index]; }
+  auto operator[](size_t index) const { return elements_[index]; }
+  auto at(size_t index) { return elements_.at(index); }
+  auto at(size_t index) const { return elements_.at(index); }
   auto front() { return elements_.front(); }
   auto back() { return elements_.back(); }
   auto front() const { return elements_.front(); }
   auto back() const { return elements_.back(); }
+
+  // Iterators for the elements
+  auto begin() { return iterator(this, elements_.begin()); }
+  auto end() { return iterator(this, elements_.end()); }
+  auto begin() const { return iterator(this, elements_.begin()); }
+  auto end() const { return iterator(this, elements_.end()); }
 
   auto data() const { return elements_.data(); }
 

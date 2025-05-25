@@ -39,3 +39,24 @@ TEST(VerletIntegratorTest, Step) {
     EXPECT_EQ(it->position, initial_position + initial_velocity * i);
   }
 }
+
+TEST(VerletIntegratorTest, MultipleParticles) {
+  EmptySystem system;
+  auto initial_position = Cartesian3D{0, 0, 0};
+  auto initial_velocity = Vector{1, 0, 0};
+  auto it1 = system.pushParticle(CommonParticle{1.0, 1.0}, initial_position,
+                                 initial_velocity);
+  auto it2 = system.pushParticle(CommonParticle{2.0, 2.0}, initial_position,
+                                 -initial_velocity);
+
+  EXPECT_EQ(it1->position, initial_position);
+  EXPECT_EQ(it2->position, initial_position);
+
+  constexpr auto n = 10;
+
+  for (auto i = 1; i <= n; ++i) {
+    system.step(1.0);
+    EXPECT_EQ(it1->position, initial_position + initial_velocity * i);
+    EXPECT_EQ(it2->position, initial_position - initial_velocity * i);
+  }
+}
