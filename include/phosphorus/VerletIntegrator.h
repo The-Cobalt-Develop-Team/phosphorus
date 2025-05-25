@@ -6,6 +6,7 @@
 #define PHOSPHORUS_INCLUDE_PHOSPHORUS_VERLETINTEGRATOR_H
 
 #include "phosphorus/Coordinate.h"
+#include "phosphorus/Field.h"
 #include "phosphorus/Particle.h"
 #include <cmath>
 #include <iterator>
@@ -55,6 +56,10 @@ public:
     iterator(BaseVerletIntegrator *container, vector_iter iter)
         : container_(container),
           index_(std::distance(container->elements_.begin(), iter)) {}
+
+    iterator(BaseVerletIntegrator *container, pointer ptr)
+        : container_(container),
+          index_(std::distance(container->elements_.data(), ptr)) {}
 
     reference operator*() const { return container_->elements_[index_]; }
 
@@ -139,26 +144,19 @@ public:
       acc.resize(n);
     }
 
-    // Calculate acceleration
-    auto it = acc.begin();
-    for (auto elem_it = this->begin(); elem_it != this->end();
-         ++elem_it, ++it) {
-      *it = this->calculateAcceleration(elem_it);
-      if (first_step) {
-        // If this is the first step, we need to set the initial acceleration
-        // to the current acceleration
-        elem_it->acceleration = *it;
+    if (first_step) {
+      for (auto &elem : elements_) {
+        elem.acceleration = this->calculateAcceleration(&elem);
       }
     }
 
     // Update positions and velocities
     // TODO: Use std::views::zip when C++23 is available
-    it = acc.begin();
     for (auto &elem : elements_) {
       elem.position += elem.velocity * dt + 0.5 * elem.acceleration * dt * dt;
-      elem.velocity += 0.5 * (elem.acceleration + *it) * dt;
-      elem.acceleration = *it;
-      ++it;
+      auto prev_acc = elem.acceleration;
+      elem.acceleration = this->calculateAcceleration(&elem);
+      elem.velocity += 0.5 * (prev_acc + elem.acceleration) * dt;
     }
 
     first_step = false;
@@ -188,6 +186,11 @@ public:
 protected:
   Vector calculateAcceleration(iterator it) const {
     return static_cast<const Impl *>(this)->calculateAccelerationImpl(it);
+  }
+
+  Vector calculateAcceleration(Element *elem) const {
+    return this->calculateAcceleration(
+        iterator(const_cast<BaseVerletIntegrator *>(this), elem));
   }
 
   std::vector<Element> elements_;
@@ -232,6 +235,12 @@ private:
 
   Field force_field_;
 };
+
+// A deducing guide for LambdaField for convenience
+template <typename Coord, typename ParticleType>
+FieldVerletIntegrator(LambdaField<Coord, ParticleType>)
+    -> FieldVerletIntegrator<LambdaField<Coord, ParticleType>, Coord,
+                             ParticleType>;
 
 /**
  * @brief Verlet integrator for particle simulation with gravity.

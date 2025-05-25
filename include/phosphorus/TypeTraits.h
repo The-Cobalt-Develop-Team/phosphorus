@@ -5,6 +5,8 @@
 #ifndef PHOSPHORUS_INCLUDE_PHOSPHORUS_TYPETRAITS_H
 #define PHOSPHORUS_INCLUDE_PHOSPHORUS_TYPETRAITS_H
 
+#include <type_traits>
+
 // This contains some enhanced type traits for the Phosphorus library.
 // Thus, we use the naming style of STL instead of Google style.
 
@@ -21,16 +23,15 @@ struct function_traits<ReturnType (ClassType::*)()> {
 };
 
 template <typename ClassType, typename ReturnType, typename Arg1>
-struct function_traits<ReturnType (ClassType::*)(const Arg1 &)> {
-  using first_argument_type = Arg1;
+struct function_traits<ReturnType (ClassType::*)(Arg1)> {
+  using first_argument_type = std::remove_cvref_t<Arg1>;
   using result_type = ReturnType;
 };
 
 template <typename ClassType, typename ReturnType, typename Arg1, typename Arg2>
-struct function_traits<ReturnType (ClassType::*)(const Arg1 &, const Arg2 &)
-                           const> {
-  using first_argument_type = Arg1;
-  using second_argument_type = Arg2;
+struct function_traits<ReturnType (ClassType::*)(Arg1, Arg2) const> {
+  using first_argument_type = std::remove_cvref_t<Arg1>;
+  using second_argument_type = std::remove_cvref_t<Arg2>;
   using result_type = ReturnType;
 };
 

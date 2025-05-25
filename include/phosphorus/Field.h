@@ -57,6 +57,7 @@ template <typename Coord, typename ParticleType>
   requires IsCoordinateVec<Coord>
 class LambdaField : public BaseField<LambdaField<Coord, ParticleType>, Coord> {
 public:
+  using Particle = ParticleType;
   using CoordinateVecType = Coord;
   using Vector = typename CoordinateVecType::Vector;
 

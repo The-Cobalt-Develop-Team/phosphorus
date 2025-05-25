@@ -20,3 +20,7 @@ add_subdirectory("${PHOSPHORUS_SOURCE_DIR}")
 if (PHOSPHORUS_BUILD_TESTS)
     add_subdirectory("${PHOSPHORUS_TEST_DIR}")
 endif ()
+
+if (PHOSPHORUS_BUILD_EXAMPLES)
+    add_subdirectory("${PHOSPHORUS_EXAMPLES_DIR}")
+endif ()

@@ -44,6 +44,7 @@ typename Coord::Scalar distance(const Coord &lhs, const Coord &rhs) {
 template <typename Impl, size_t kDimension> class BaseCoordinateVec {
 public:
   using Scalar = double; ///< The type of the coordinate components.
+  using value_type = Scalar;
 
   /**
    * @brief The type of the corresponding Cartesian vector.
@@ -113,6 +114,7 @@ public:
   static auto fromVector(const Vector &vector) { return Impl(vector); }
 
   static constexpr size_t dimension() { return kDimension; }
+  [[nodiscard]] constexpr size_t size() const { return kDimension; }
 
   friend bool operator==(const BaseCoordinateVec &lhs,
                          const BaseCoordinateVec &rhs) {
@@ -147,6 +149,9 @@ public:
   }
 
   auto operator-(const Vector &rhs) const { return Impl{vector_ - rhs}; }
+
+  Scalar &operator[](size_t index) { return vector_[index]; }
+  Scalar operator[](size_t index) const { return vector_[index]; }
 
 protected:
   Vector vector_;

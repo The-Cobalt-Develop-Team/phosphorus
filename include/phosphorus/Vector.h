@@ -19,6 +19,7 @@ namespace phosphorus {
 template <size_t kDimension, typename T = double> class Vector {
 public:
   using Scalar = T;
+  using value_type = T;
 
   Vector() = default;
   Vector(const Vector &) = default;
@@ -101,6 +102,10 @@ public:
     return rhs * scalar;
   }
 
+  friend Vector operator/(const Vector &lhs, Scalar scalar) {
+    return (1.0 / scalar) * lhs;
+  }
+
   Scalar operator[](size_t index) const {
     assert(index < kDimension);
     return components_[index];
@@ -122,6 +127,8 @@ public:
     os << ")";
     return os;
   }
+
+  [[nodiscard]] size_t size() const { return kDimension; }
 
 protected:
   Scalar components_[kDimension];
