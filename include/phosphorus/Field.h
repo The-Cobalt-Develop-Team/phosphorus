@@ -152,7 +152,7 @@ auto operator-(const LHS &lhs, const RHS &rhs)
 /**
  * @brief A gravity field in Cartesian coordinates.
  */
-class CartesianGravityField : BaseField<CartesianGravityField, Cartesian3D> {
+class CartesianGravityField : public BaseField<CartesianGravityField, Cartesian3D> {
 public:
   using CoordinateVecType = Cartesian3D;
   using Vector = CoordinateVecType::Vector;

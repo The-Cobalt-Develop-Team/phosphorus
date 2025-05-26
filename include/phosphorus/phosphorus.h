@@ -9,6 +9,7 @@
 
 #include "phosphorus/Coordinate.h"
 #include "phosphorus/Field.h"
+#include "phosphorus/Gnuplot.h"
 #include "phosphorus/Particle.h"
 #include "phosphorus/SignalSlot.h"
 #include "phosphorus/TypeTraits.h"
