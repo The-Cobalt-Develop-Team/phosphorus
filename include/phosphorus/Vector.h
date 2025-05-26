@@ -150,6 +150,34 @@ public:
 
   using Scalar = T;
 
+  friend EuclideanVector operator+(const EuclideanVector &lhs,
+                                   const EuclideanVector &rhs) {
+    EuclideanVector result = lhs;
+    result += rhs;
+    return result;
+  }
+
+  friend EuclideanVector operator-(const EuclideanVector &lhs,
+                                   const EuclideanVector &rhs) {
+    EuclideanVector result = lhs;
+    result -= rhs;
+    return result;
+  }
+
+  friend EuclideanVector operator*(const EuclideanVector &lhs, Scalar scalar) {
+    EuclideanVector result = lhs;
+    result *= scalar;
+    return result;
+  }
+
+  friend EuclideanVector operator*(Scalar scalar, const EuclideanVector &rhs) {
+    return rhs * scalar;
+  }
+
+  friend EuclideanVector operator/(const EuclideanVector &lhs, Scalar scalar) {
+    return (1.0 / scalar) * lhs;
+  }
+
   Scalar operator*(const EuclideanVector &rhs) const {
     // TODO: More general dot product
     Scalar result = 0;

@@ -149,6 +149,38 @@ auto operator-(const LHS &lhs, const RHS &rhs)
   return lhs + (-rhs);
 }
 
+/**
+ * @brief A gravity field in Cartesian coordinates.
+ */
+class CartesianGravityField : BaseField<CartesianGravityField, Cartesian3D> {
+public:
+  using CoordinateVecType = Cartesian3D;
+  using Vector = CoordinateVecType::Vector;
+  using Scalar = CoordinateVecType::Scalar;
+
+  CartesianGravityField() = default;
+  CartesianGravityField(const Cartesian3D &center, Scalar mass)
+      : center_(center), mass_(mass) {}
+
+  template <typename ParticleType>
+    requires Massive<ParticleType>
+  Vector evaluate(const CoordinateVecType &coord,
+                  const ParticleType &particle) const {
+    auto r = coord.toCartesian() - center_.toCartesian();
+    auto distance = r.norm();
+    auto elem_r = r / distance;
+    auto force = -mass_ * particle.mass() / (distance * distance);
+    return force * elem_r;
+  }
+
+private:
+  Cartesian3D center_ = {0, 0, 0};
+  Scalar mass_ = 1.0;
+};
+
+static_assert(IsField<CartesianGravityField>,
+              "CartesianGravityField is not a field");
+
 } // namespace phosphorus
 
 #endif // PHOSPHORUS_INCLUDE_PHOSPHORUS_FIELD_H
