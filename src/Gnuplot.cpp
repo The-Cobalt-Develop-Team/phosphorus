@@ -4,7 +4,106 @@
 
 #include "phosphorus/Gnuplot.h"
 
-#if defined(_WIN32) || defined(_WIN64)
+#define PHOSPHORUS_USE_BOOST
+
+#ifdef PHOSPHORUS_USE_BOOST
+
+// Fuck the GOD DAMN Windows API.
+#define _WIN32_WINNT 0x0601
+#define WIN32_LEAN_AND_MEAN
+#include <boost/asio.hpp>
+#include <boost/process.hpp>
+
+namespace asio = boost::asio;
+namespace bp = boost::process;
+using path = boost::filesystem::path;
+using error_code = boost::system::error_code;
+
+namespace phosphorus {
+
+class Gnuplot::GnuplotImpl {
+  friend class Gnuplot;
+
+public:
+  static constexpr const char *kGnuplotExecutable = "gnuplot";
+
+  GnuplotImpl() = default;
+  ~GnuplotImpl() { stop(); }
+
+  GnuplotImpl(const GnuplotImpl &) = delete;
+  GnuplotImpl &operator=(const GnuplotImpl &) = delete;
+  GnuplotImpl(GnuplotImpl &&other) noexcept = delete;
+  GnuplotImpl &operator=(GnuplotImpl &&other) noexcept = delete;
+
+  auto setCommand(const std::string &command) -> GnuplotImpl & {
+    this->command_ = command;
+    return *this;
+  }
+
+  auto start() -> GnuplotImpl & {
+    // Reset the gnuplot_ pointer.
+    auto ptr = new bp::process{ctx_,     // io_context
+                               command_, // gnuplot executable path
+                               {},       // subprocess arguments
+                               bp::process_stdio{
+                                   .in = child_stdin_,   // stdin of subprocess
+                                   .out = child_stdout_, // stdout of subprocess
+                                   .err = child_stderr_  // stderr of subprocess
+                               }};
+
+    gnuplot_.reset(ptr);
+
+    return *this;
+  }
+
+  void stop() const {
+    if (running()) {
+      gnuplot_->terminate();
+    }
+  }
+
+  void execute(const std::string &command) {
+    if (!running()) {
+      throw GnuplotException("Gnuplot process is not running");
+    }
+
+    child_stdin_.async_write_some(
+        asio::buffer(command.data(), command.size()),
+        [this](const boost::system::error_code &ec, std::size_t) {
+          if (ec) {
+            throw GnuplotException("Gnuplot error: " + ec.message());
+          }
+        });
+  }
+
+  [[nodiscard]] bool running() const {
+    boost::system::error_code ec;
+    return gnuplot_ && gnuplot_->running(ec);
+  }
+
+private:
+  // Use a custom deleter for the gnuplot process to ensure it is terminated
+  struct BPProcessDeleter {
+    void operator()(bp::process *proc) const {
+      if (error_code ec; proc && proc->running(ec)) {
+        proc->terminate();
+        delete proc;
+      }
+    }
+  };
+  using ProcessPtr = std::unique_ptr<bp::process, BPProcessDeleter>;
+
+  asio::io_context ctx_{};
+  asio::writable_pipe child_stdin_{ctx_};
+  asio::readable_pipe child_stdout_{ctx_};
+  asio::readable_pipe child_stderr_{ctx_};
+  ProcessPtr gnuplot_ = nullptr;
+  path command_ = bp::environment::find_executable(kGnuplotExecutable);
+};
+
+} // namespace phosphorus
+
+#elif defined(_WIN32) || defined(_WIN64)
 #include "Windows.h"
 
 #include <iomanip>
@@ -221,7 +320,7 @@ public:
     Sleep(kSleepTime);
     // FIXME: Wait for the gnuplot prompt
     // if (!waitForPrompt()) {
-    //   throw GnuplotException("Timeout waiting for gnuplot prompt");
+    // throw GnuplotException("Timeout waiting for gnuplot prompt");
     // }
   }
 
@@ -276,14 +375,10 @@ std::string Gnuplot::commandPreprocessor(const std::string &command) {
   while (!processed_command.empty() && processed_command.back() == '\n') {
     processed_command.pop_back(); // Remove trailing '\n'
   }
-  processed_command += ";print \'";
-  processed_command += GnuplotImpl::kGnuplotEndFlag;
-  processed_command += "\';\n";
-  std::cout << processed_command
-            << std::endl; // Print the command to stdout for debugging
+  processed_command += '\n';
   return processed_command;
 }
 
-std::string &Gnuplot::getBuffer() const { return impl_->buffer_; }
+// std::string &Gnuplot::getBuffer() const { return impl_->buffer_; }
 
 } // namespace phosphorus

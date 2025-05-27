@@ -6,13 +6,17 @@
 #include <iostream>
 
 using namespace phosphorus;
+using namespace std;
 
 int main() {
-  Gnuplot plot;
   try {
+    Gnuplot plot;
     plot.execute("plot sin(x)");
+    int x;
+    cin >> x; // Wait for user input to keep the plot open
     plot.execute("plot cos(x)");
-  } catch (std::exception& e) {
+    cin >> x; // Wait for user input to keep the plot open
+  } catch (std::exception &e) {
     std::cerr << e.what() << std::endl;
   }
   return 0;

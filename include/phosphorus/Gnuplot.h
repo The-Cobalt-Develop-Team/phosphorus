@@ -7,7 +7,6 @@
 
 #include <iostream>
 #include <string>
-#include <utility>
 
 namespace phosphorus {
 
@@ -18,7 +17,7 @@ class Gnuplot {
   class GnuplotImpl;
 
 public:
-  static constexpr const char *kGnuplotExecutable = "gnuplot -p";
+  struct PlotArgument {};
 
   Gnuplot();
   ~Gnuplot();
@@ -33,8 +32,6 @@ public:
 
   Gnuplot &execute(const std::string &command);
 
-  [[nodiscard]] std::string &getBuffer() const;
-
   // iostream support for Gnuplot.
   std::istream &istream();
   std::ostream &ostream();
@@ -48,16 +45,13 @@ private:
   std::unique_ptr<GnuplotImpl> impl_;
 };
 
-class GnuplotException final : public std::exception {
+class GnuplotException final : public std::runtime_error {
 public:
-  explicit GnuplotException(std::string message) : what_(std::move(message)) {}
+  explicit GnuplotException(const std::string &what) : runtime_error(what) {}
 
   [[nodiscard]] const char *what() const noexcept override {
-    return what_.c_str();
+    return runtime_error::what();
   }
-
-private:
-  std::string what_;
 };
 
 } // namespace phosphorus
