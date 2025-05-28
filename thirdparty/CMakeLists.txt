@@ -4,11 +4,11 @@ if (PHOSPHORUS_USE_MORPHOLOGICA)
     set(MORPHOLOGICA_BUILD_EXAMPLES OFF)
     set(MORPHOLOGICA_BUILD_TESTS OFF)
     set(MORPHOLOGICA_BUILD_DOCS OFF)
-    add_subdirectory("${MORPHOLOGICA_ROOT_DIR}")
     add_library(morphologica INTERFACE)
     find_package(OpenGL REQUIRED)
     find_package(Freetype REQUIRED)
     find_package(glfw3 REQUIRED)
+    find_package(nlohmann_json REQUIRED)
     target_include_directories(morphologica INTERFACE
             "${MORPHOLOGICA_ROOT_DIR}"
             "${GLFW3_INCLUDE_DIR}"
@@ -22,7 +22,5 @@ if (PHOSPHORUS_USE_MORPHOLOGICA)
             Freetype::Freetype
             nlohmann_json
     )
-    message(STATUS "GL: ${OPENGL_INCLUDE_DIRS}")
-    message(STATUS "GL Libraries: ${OPENGL_LIBRARIES}")
     message(STATUS "Morphologica library added")
 endif ()
