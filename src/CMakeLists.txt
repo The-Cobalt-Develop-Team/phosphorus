@@ -13,6 +13,8 @@ target_link_libraries(
         phosphorus
         PUBLIC
         Boost::process
+#        sciplot
+        morphologica
 )
 
 target_include_directories(
