@@ -37,7 +37,7 @@ def plot_error():
 
 
 def plot_figure():
-    time, verlet_res, cpp_res, py_res, error, max_error = calc(0.01)
+    time, verlet_res, cpp_res, py_res, error, max_error = calc(0.0001)
 
     plt.plot(time, py_res, label="Python", color="blue", linestyle="dashed")
     plt.plot(time, cpp_res, label="C++", color="red")
@@ -62,4 +62,4 @@ def plot_figure():
 
 
 if __name__ == "__main__":
-    plot_error()
+    plot_figure()

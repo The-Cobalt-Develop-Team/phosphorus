@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace phosphorus {
 
@@ -17,7 +18,75 @@ class Gnuplot {
   class GnuplotImpl;
 
 public:
-  struct PlotArgument {};
+  struct PlotConfig {
+    enum class PlotType {
+      None,
+      Dots,
+      Lines,
+      Points,
+      LinesPoints,
+      Boxes,
+    };
+
+    enum class SmoothType {
+      None,
+      Unique,
+      Acsplines,
+      Beziers,
+      Csplines,
+      Sbeziers,
+    };
+
+    static constexpr std::string plotTypeToString(PlotType type) {
+      switch (type) {
+      case PlotType::Dots:
+        return "dots";
+      case PlotType::Lines:
+        return "lines";
+      case PlotType::Points:
+        return "points";
+      case PlotType::LinesPoints:
+        return "linespoints";
+      case PlotType::Boxes:
+        return "boxes";
+      default:
+        return "";
+      }
+    }
+
+    static constexpr std::string smoothTypeToString(SmoothType type) {
+      switch (type) {
+      case SmoothType::Unique:
+        return "unique";
+      case SmoothType::Acsplines:
+        return "acsplines";
+      case SmoothType::Beziers:
+        return "beziers";
+      case SmoothType::Csplines:
+        return "csplines";
+      case SmoothType::Sbeziers:
+        return "sbeziers";
+      default:
+        return "";
+      }
+    }
+
+    std::vector<double> x;                // x-axis data
+    std::vector<double> y;                // y-axis data
+    PlotType with = PlotType::None;       // line type
+    std::string title{};                  // title of line
+    SmoothType smooth = SmoothType::None; // smoothing type
+  };
+
+  struct FigureConfig {
+    std::pair<double, double> xrange{0.0, 0.0};  // x-axis range
+    std::pair<double, double> yrange{0.0, 0.0};  // y-axis range
+    std::pair<double, double> xoffset{0.0, 0.0}; // offset for the x-axis
+    std::pair<double, double> yoffset{0.0, 0.0}; // offset for the y-axis
+    std::string xlabel{};                        // x-axis label
+    std::string ylabel{};                        // y-axis label
+    bool grid = true;                            // show grid
+  };
 
   Gnuplot();
   ~Gnuplot();
@@ -28,16 +97,38 @@ public:
   Gnuplot(Gnuplot &&other) noexcept;
   Gnuplot &operator=(Gnuplot &&other) noexcept;
 
-  Gnuplot &setCommand(const std::string &);
-
   Gnuplot &execute(const std::string &command);
 
-  // iostream support for Gnuplot.
-  std::istream &istream();
-  std::ostream &ostream();
+  Gnuplot &setFigureConfig(const FigureConfig &config) {
+    figure_config_ = config;
+    return *this;
+  }
+
+  Gnuplot &plot(const PlotConfig &config) {
+    plot_configs_.emplace_back(config);
+    return *this;
+  }
+
+  Gnuplot &clear() {
+    plot_configs_.clear();
+    return *this;
+  }
+
+  void savefig(const std::string &filename);
+  void show();
 
 private:
+  struct TempFileGuard;
+
   static std::string commandPreprocessor(const std::string &);
+
+  static void generateDataBlock(const std::string &filename,
+                              const std::vector<double> &x,
+                              const std::vector<double> &y);
+  [[nodiscard]] std::string generatePlotCommand(const std::string &) const;
+
+  FigureConfig figure_config_;
+  std::vector<PlotConfig> plot_configs_;
 
   // We use a unique pointer to manage the Gnuplot implementation.
   // This allows us to hide the implementation details and

@@ -24,3 +24,5 @@ if (PHOSPHORUS_USE_MORPHOLOGICA)
     )
     message(STATUS "Morphologica library added")
 endif ()
+
+add_subdirectory("${PHOSPHORUS_THIRD_PARTY_DIR}/range-v3")
