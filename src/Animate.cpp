@@ -8,6 +8,7 @@
 #include "range/v3/algorithm/min_element.hpp"
 #include <boost/filesystem.hpp>
 #include <format>
+#include <fstream>
 #include <iostream>
 #include <opencv2/opencv.hpp>
 #include <range/v3/range.hpp>
@@ -58,6 +59,8 @@ void AnimateGenerator::generateKeyframes(std::span<Cartesian2D> points) const {
   auto temp_name = temp_data.string();
   Gnuplot::generateDataBlock(temp_data.string(), x, y);
 
+  // std::ofstream temp("temp.txt");
+
 #pragma omp parallel for
   for (int i = 0; i < points.size(); i++) {
     Gnuplot plot;
@@ -71,17 +74,20 @@ void AnimateGenerator::generateKeyframes(std::span<Cartesian2D> points) const {
             .grid = true,
         })
         .plot({
+            .index = 0,
             .every = {1, i + 1},
             .with = Gnuplot::PlotConfig::PlotType::Lines,
             .style = "lt 1 lw 2 notitle",
         })
         .plot({
+            .index = 0,
             .every = {i + 1, i + 1},
             .with = Gnuplot::PlotConfig::PlotType::Points,
-            .style = "pt 7 ps 1.5 lc rgb 'red' notitle",
+            .style = "pt 5 ps 1 lc rgb 'red' notitle",
         });
     auto command = plot.generatePlotCommand(temp_name);
     plot.execute(command);
+    // temp << command;
     plot.execute("exit\n");
     auto res = plot.wait();
     if (res != 0) {

@@ -248,7 +248,11 @@ std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
       command << ", ";
     }
     command << format("'{}' ", temp_file);
-    command << format("index {} ", index);
+    if (plot_config.index != -1) {
+      command << format("index {} ", plot_config.index);
+    } else {
+      command << format("index {} ", index); // Use the index from the loop
+    }
     command << format("using 1:2 ");
     if (plot_config.every != std::pair<int, int>{0, 0}) {
       command << format("every ::{}::{} ", plot_config.every.first,

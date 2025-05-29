@@ -76,6 +76,7 @@ public:
 
     std::span<double> x{};                // x data
     std::span<double> y{};                // y data
+    int index = -1;                       // index of the data in the file
     std::pair<int, int> every{0, 0};      // every nth point to plot
     PlotType with = PlotType::None;       // line type
     std::string title{};                  // title of line
