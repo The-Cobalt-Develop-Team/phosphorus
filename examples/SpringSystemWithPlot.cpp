@@ -93,9 +93,8 @@ int main(int argc, char *argv[]) {
           .title = "expected position",
           .smooth = Gnuplot::PlotConfig::SmoothType::Acsplines,
       })
-      .show();
-
-  plot.savefig("output");
+      .show()
+      .savefig("output");
 
   return 0;
 }

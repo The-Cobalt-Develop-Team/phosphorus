@@ -5,7 +5,9 @@
 #ifndef PHOSPHORUS_INCLUDE_PHOSPHORUS_GNUPLOT_H
 #define PHOSPHORUS_INCLUDE_PHOSPHORUS_GNUPLOT_H
 
+#include "phosphorus/Coordinate.h"
 #include <iostream>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -16,6 +18,7 @@ namespace phosphorus {
  */
 class Gnuplot {
   class GnuplotImpl;
+  friend class AnimateGenerator;
 
 public:
   struct PlotConfig {
@@ -71,11 +74,13 @@ public:
       }
     }
 
-    std::vector<double> x;                // x-axis data
-    std::vector<double> y;                // y-axis data
+    std::span<double> x{};                // x data
+    std::span<double> y{};                // y data
+    std::pair<int, int> every{0, 0};      // every nth point to plot
     PlotType with = PlotType::None;       // line type
     std::string title{};                  // title of line
     SmoothType smooth = SmoothType::None; // smoothing type
+    std::string style{};                  // style of line, e.g., "lines lw 2"
   };
 
   struct FigureConfig {
@@ -114,18 +119,21 @@ public:
     return *this;
   }
 
-  void savefig(const std::string &filename);
-  void show();
+  Gnuplot &savefig(const std::string &filename);
+  Gnuplot &show();
+
+  int wait() const;
 
 private:
   struct TempFileGuard;
 
   static std::string commandPreprocessor(const std::string &);
 
+  // TODO: Redesign this using range-like api
   static void generateDataBlock(const std::string &filename,
-                              const std::vector<double> &x,
-                              const std::vector<double> &y);
+                                std::span<double> x, std::span<double> y);
   [[nodiscard]] std::string generatePlotCommand(const std::string &) const;
+  [[nodiscard]] std::string generateFigureCommand() const;
 
   FigureConfig figure_config_;
   std::vector<PlotConfig> plot_configs_;

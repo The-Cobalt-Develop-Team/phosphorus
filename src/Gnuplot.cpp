@@ -163,8 +163,7 @@ struct Gnuplot::TempFileGuard {
 };
 
 void Gnuplot::generateDataBlock(const std::string &filename,
-                                const std::vector<double> &x,
-                                const std::vector<double> &y) {
+                                std::span<double> x, std::span<double> y) {
   using std::format;
   std::fstream file(filename, std::ios::app);
   if (!file.is_open()) {
@@ -175,6 +174,40 @@ void Gnuplot::generateDataBlock(const std::string &filename,
   }
   file << "\n\n"; // End of data block
   file.close();
+}
+
+std::string Gnuplot::generateFigureCommand() const {
+  using std::format;
+  static constexpr std::pair kDefaultPair = {0.0, 0.0};
+  std::stringstream command;
+  if (figure_config_.xrange != kDefaultPair)
+    command << format("set xrange [{}:{}]\n", //
+                      figure_config_.xrange.first,
+                      figure_config_.xrange.second);
+  if (figure_config_.yrange != kDefaultPair)
+    command << format("set yrange [{}:{}]\n", //
+                      figure_config_.yrange.first,
+                      figure_config_.yrange.second);
+  if (!figure_config_.xlabel.empty()) {
+    command << format("set xlabel '{}'", figure_config_.xlabel);
+    if (figure_config_.xoffset != kDefaultPair) {
+      command << format("offset x {}:{}", figure_config_.xoffset.first,
+                        figure_config_.xoffset.second);
+    }
+    command << '\n';
+  }
+  if (!figure_config_.ylabel.empty()) {
+    command << format("set ylabel '{}'", figure_config_.ylabel);
+    if (figure_config_.yoffset != kDefaultPair) {
+      command << format("offset y {}:{}", figure_config_.yoffset.first,
+                        figure_config_.yoffset.second);
+    }
+    command << '\n';
+  }
+  if (figure_config_.grid) {
+    command << "set grid\n";
+  }
+  return command.str();
 }
 
 std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
@@ -217,9 +250,16 @@ std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
     command << format("'{}' ", temp_file);
     command << format("index {} ", index);
     command << format("using 1:2 ");
+    if (plot_config.every != std::pair<int, int>{0, 0}) {
+      command << format("every ::{}::{} ", plot_config.every.first,
+                        plot_config.every.second);
+    }
     if (plot_config.with != PlotConfig::PlotType::None) {
       command << format("with {} ",
                         PlotConfig::plotTypeToString(plot_config.with));
+      if (!plot_config.style.empty()) {
+        command << format("{}", plot_config.style);
+      }
     }
     if (!plot_config.title.empty()) {
       command << format("title '{}' ", plot_config.title);
@@ -228,23 +268,30 @@ std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
       command << format("smooth {} ",
                         PlotConfig::smoothTypeToString(plot_config.smooth));
     }
-    generateDataBlock(temp_file, plot_config.x, plot_config.y);
+    // generateDataBlock(temp_file, plot_config.x, plot_config.y);
   }
   command << "\n"; // End of plot command
   return command.str();
 }
 
-void Gnuplot::savefig(const std::string &filename) {
-  using std::format;
-  static std::random_device rd;
-  static std::mt19937 gen(rd());
-  static std::uniform_int_distribution<> dis{};
-  TempFileGuard guard(format("{}.dat", dis(gen)));
+#define TEMP_FILE_GUARD(guard)                                                 \
+  using std::format;                                                           \
+  static std::random_device rd;                                                \
+  static std::mt19937 gen(rd());                                               \
+  static std::uniform_int_distribution<> dis{};                                \
+  TempFileGuard guard(format("{}.dat", dis(gen)))
+
+Gnuplot &Gnuplot::savefig(const std::string &filename) {
+  TEMP_FILE_GUARD(guard);
 
   auto output = format("{}.png", filename);
 
   if (fs::exists(output)) {
     fs::remove(output); // Remove existing file if it exists
+  }
+
+  for (auto &&[index, plot_config] : ranges::views::enumerate(plot_configs_)) {
+    generateDataBlock(guard.filename_, plot_config.x, plot_config.y);
   }
 
   std::stringstream command;
@@ -263,14 +310,12 @@ void Gnuplot::savefig(const std::string &filename) {
                            std::to_string(res));
   }
   std::cout << "Figure saved to " << output << std::endl;
+
+  return *this;
 }
 
-void Gnuplot::show() {
-  using std::format;
-  static std::random_device rd;
-  static std::mt19937 gen(rd());
-  static std::uniform_int_distribution<> dis{};
-  TempFileGuard guard(format("{}.dat", dis(gen)));
+Gnuplot &Gnuplot::show() {
+  TEMP_FILE_GUARD(guard);
 
   std::stringstream command;
   command << "set terminal wxt enhanced size 800,600\n";
@@ -279,8 +324,13 @@ void Gnuplot::show() {
   command << "replot\n"; // Replot to show the current data
 
   this->execute(command.str());
-  // waitForAnyKey();
+
+  std::cout << "Press any key to continue...\n";
   getchar(); // Press any key to continue
+
+  return *this;
 }
+
+int Gnuplot::wait() const { return impl_->wait(); }
 
 } // namespace phosphorus

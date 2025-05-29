@@ -7,6 +7,7 @@
 
 // This is a placeholder header file for the Phosphorus library.
 
+#include "phosphorus/Animate.h"
 #include "phosphorus/Coordinate.h"
 #include "phosphorus/Field.h"
 #include "phosphorus/Gnuplot.h"
