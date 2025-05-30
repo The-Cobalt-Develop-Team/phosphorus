@@ -7,6 +7,7 @@
 
 #include "phosphorus/Vector.h"
 #include <concepts>
+#include <format>
 #include <type_traits>
 
 namespace phosphorus {
@@ -157,6 +158,19 @@ protected:
   Vector vector_;
 };
 
+template <typename T> struct formatter;
+
+template <typename Impl, size_t kDimension>
+struct formatter<BaseCoordinateVec<Impl, kDimension>> {
+  using Coordinate = BaseCoordinateVec<Impl, kDimension>;
+
+  template <typename FormatContext>
+  auto format(const Coordinate &coord, FormatContext &ctx) const {
+    return format_to(ctx.out(), "Coordinate({}, dimension={})",
+                     coord.toVector(), kDimension);
+  }
+};
+
 // TODO: Implement a template for Cartesian coordinates
 
 /**
@@ -223,5 +237,9 @@ class Spherical : public BaseCoordinateVec<Spherical, 3> {};
 class Minkowski : public BaseCoordinateVec<Minkowski, 4> {};
 
 } // namespace phosphorus
+
+template <typename Impl, size_t kDimension>
+struct std::formatter<phosphorus::BaseCoordinateVec<Impl, kDimension>>
+    : phosphorus::formatter<phosphorus::BaseCoordinateVec<Impl, kDimension>> {};
 
 #endif // PHOSPHORUS_INCLUDE_PHOSPHORUS_COORDINATE_H

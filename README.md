@@ -8,7 +8,8 @@ It is also part of the project assignment for the course "Math Software" at ZJU 
 
 - [x] Basic model
 - [x] Verlet algorithm
-- [ ] visualization using ffmpeg
+- [x] visualization using OpenCV
+- [ ] visualization using GNUplot
 - [ ] GUI
 
 ## Build

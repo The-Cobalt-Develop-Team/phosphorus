@@ -74,8 +74,8 @@ public:
       }
     }
 
-    std::span<double> x{};                // x data
-    std::span<double> y{};                // y data
+    std::vector<double> x{};                // x data
+    std::vector<double> y{};                // y data
     int index = -1;                       // index of the data in the file
     std::pair<int, int> every{0, 0};      // every nth point to plot
     PlotType with = PlotType::None;       // line type
@@ -85,13 +85,18 @@ public:
   };
 
   struct FigureConfig {
+    unsigned int width = 800;                    // width of the figure
+    unsigned int height = 600;                   // height of the figure
     std::pair<double, double> xrange{0.0, 0.0};  // x-axis range
     std::pair<double, double> yrange{0.0, 0.0};  // y-axis range
+    std::pair<double, double> zrange{0.0, 0.0};  // z-axis range (if applicable)
     std::pair<double, double> xoffset{0.0, 0.0}; // offset for the x-axis
     std::pair<double, double> yoffset{0.0, 0.0}; // offset for the y-axis
+    std::pair<double, double> zoffset{0.0, 0.0}; // offset for the z-axis
     std::string xlabel{};                        // x-axis label
     std::string ylabel{};                        // y-axis label
     bool grid = true;                            // show grid
+    bool in3D = false;                           // is the plot in 3D
   };
 
   Gnuplot();
@@ -123,7 +128,7 @@ public:
   Gnuplot &savefig(const std::string &filename);
   Gnuplot &show();
 
-  int wait() const;
+  [[nodiscard]] int wait() const;
 
 private:
   struct TempFileGuard;
@@ -133,7 +138,11 @@ private:
   // TODO: Redesign this using range-like api
   static void generateDataBlock(const std::string &filename,
                                 std::span<double> x, std::span<double> y);
-  [[nodiscard]] std::string generatePlotCommand(const std::string &) const;
+  static void generate3DDataBlock(const std::string &filename,
+                                  std::span<double> x, std::span<double> y,
+                                  std::span<double> z);
+  [[nodiscard]] std::string
+  generatePlotCommand(const std::string &output) const;
   [[nodiscard]] std::string generateFigureCommand() const;
 
   FigureConfig figure_config_;

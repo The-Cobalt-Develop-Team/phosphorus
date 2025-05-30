@@ -152,15 +152,16 @@ auto operator-(const LHS &lhs, const RHS &rhs)
 /**
  * @brief A gravity field in Cartesian coordinates.
  */
-class CartesianGravityField : public BaseField<CartesianGravityField, Cartesian3D> {
+class CartesianGravityField
+    : public BaseField<CartesianGravityField, Cartesian3D> {
 public:
   using CoordinateVecType = Cartesian3D;
   using Vector = CoordinateVecType::Vector;
   using Scalar = CoordinateVecType::Scalar;
 
   CartesianGravityField() = default;
-  CartesianGravityField(const Cartesian3D &center, Scalar mass)
-      : center_(center), mass_(mass) {}
+  CartesianGravityField(const Cartesian3D &center, Scalar mass, double G = G_SI)
+      : center_(center), mass_(mass), G_(G) {}
 
   template <typename ParticleType>
     requires Massive<ParticleType>
@@ -169,17 +170,55 @@ public:
     auto r = coord.toCartesian() - center_.toCartesian();
     auto distance = r.norm();
     auto elem_r = r / distance;
-    auto force = -mass_ * particle.mass() / (distance * distance);
+    auto force = -mass_ * particle.mass() * G_ / (distance * distance);
     return force * elem_r;
   }
 
 private:
+  static constexpr double G_SI = 6.67430e-11; // Gravitational constant
+  double G_ = G_SI; // Gravitational constant in SI units
   Cartesian3D center_ = {0, 0, 0};
   Scalar mass_ = 1.0;
 };
 
 static_assert(IsField<CartesianGravityField>,
               "CartesianGravityField is not a field");
+
+/**
+ * @brief A gravity field in Cartesian coordinates.
+ */
+class Cartesian2DGravityField
+    : public BaseField<Cartesian2DGravityField, Cartesian3D> {
+public:
+  using CoordinateVecType = Cartesian2D;
+  using Vector = CoordinateVecType::Vector;
+  using Scalar = CoordinateVecType::Scalar;
+
+  Cartesian2DGravityField() = default;
+  Cartesian2DGravityField(const Cartesian2D &center, Scalar mass,
+                          double G = G_SI)
+      : center_(center), mass_(mass), G_(G) {}
+
+  template <typename ParticleType>
+    requires Massive<ParticleType>
+  Vector evaluate(const CoordinateVecType &coord,
+                  const ParticleType &particle) const {
+    auto r = coord.toCartesian() - center_.toCartesian();
+    auto distance = r.norm();
+    auto elem_r = r / distance;
+    auto force = -mass_ * particle.mass() * G_ / (distance * distance);
+    return force * elem_r;
+  }
+
+private:
+  static constexpr double G_SI = 6.67430e-11;
+  const double G_ = G_SI;
+  Cartesian2D center_ = {0, 0};
+  Scalar mass_ = 1.0;
+};
+
+static_assert(IsField<Cartesian2DGravityField>,
+              "Cartesian2DGravityField is not a field");
 
 } // namespace phosphorus
 

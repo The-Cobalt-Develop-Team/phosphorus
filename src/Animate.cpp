@@ -15,7 +15,11 @@
 #include <range/v3/view.hpp>
 
 namespace fs = boost::filesystem;
+using std::cout;
 using std::format;
+using std::string;
+using std::vector;
+using namespace ranges;
 
 namespace phosphorus {
 
@@ -25,8 +29,23 @@ void AnimateGenerator::generate(const std::string &filename,
     name_ = filename;
     time_ = time;
     setup();
-    generateKeyframes(points);
-    mergeKeyframes(points.size());
+    generateDatafile(points);
+    blockWorkflow(points.size());
+    cleanup();
+  } catch (std::exception &e) {
+    std::cerr << "Error during setup: " << e.what() << '\n';
+  }
+}
+
+void AnimateGenerator::generate(const std::string &filename,
+                                std::span<Cartesian3D> points, double time) {
+  try {
+    name_ = filename;
+    time_ = time;
+    _3D = true;
+    setup();
+    generateDatafile(points);
+    blockWorkflow(points.size());
     cleanup();
   } catch (std::exception &e) {
     std::cerr << "Error during setup: " << e.what() << '\n';
@@ -40,66 +59,74 @@ void AnimateGenerator::setup() {
   fs::create_directory(current_temp_);
 }
 
-void AnimateGenerator::generateKeyframes(std::span<Cartesian2D> points) const {
-  std::vector<double> x =
-      points | ranges::views::transform([](const auto &p) { return p[0]; }) |
-      ranges::to<std::vector<double>>();
-  std::vector<double> y =
-      points | ranges::views::transform([](const auto &p) { return p[1]; }) |
-      ranges::to<std::vector<double>>();
+void AnimateGenerator::generateDatafile(std::span<Cartesian2D> points) {
+  auto temp_file = fs::path(current_temp_) / (name_ + ".dat");
+  auto temp_name = temp_file.string();
+  vector<double> x = points |
+                     views::transform([](const auto &p) { return p[0]; }) |
+                     to<std::vector<double>>();
+  vector<double> y = points |
+                     views::transform([](const auto &p) { return p[1]; }) |
+                     to<std::vector<double>>();
 
-  // set the scaler
-  static constexpr double kScaleFactor = 1.1;
-  auto max_x = *ranges::max_element(x) * kScaleFactor;
-  auto max_y = *ranges::max_element(y) * kScaleFactor;
-  auto min_x = *ranges::min_element(x) * kScaleFactor;
-  auto min_y = *ranges::min_element(y) * kScaleFactor;
+  static constexpr double kScaleFactor = 1.1; // Scale factor for coordinates
+  min_x = *ranges::min_element(x) * kScaleFactor;
+  max_x = *ranges::max_element(x) * kScaleFactor;
+  min_y = *ranges::min_element(y) * kScaleFactor;
+  max_y = *ranges::max_element(y) * kScaleFactor;
 
-  auto temp_data = fs::path(current_temp_) / (name_ + ".dat");
-  auto temp_name = temp_data.string();
-  Gnuplot::generateDataBlock(temp_data.string(), x, y);
-
-  // std::ofstream temp("temp.txt");
-
-#pragma omp parallel for
-  for (int i = 0; i < points.size(); i++) {
-    Gnuplot plot;
-    plot.execute(format("set terminal pngcairo enhanced size 800,600\n"))
-        .execute(format("set output '{}/{}_{}.png'\n", current_temp_, name_, i))
-        .setFigureConfig({
-            .xrange = {min_x, max_x},
-            .yrange = {min_y, max_y},
-            .xlabel = "X",
-            .ylabel = "Y",
-            .grid = true,
-        })
-        .plot({
-            .index = 0,
-            .every = {1, i + 1},
-            .with = Gnuplot::PlotConfig::PlotType::Lines,
-            .style = "lt 1 lw 2 notitle",
-        })
-        .plot({
-            .index = 0,
-            .every = {i + 1, i + 1},
-            .with = Gnuplot::PlotConfig::PlotType::Points,
-            .style = "pt 5 ps 1 lc rgb 'red' notitle",
-        });
-    auto command = plot.generatePlotCommand(temp_name);
-    plot.execute(command);
-    // temp << command;
-    plot.execute("exit\n");
-    auto res = plot.wait();
-    if (res != 0) {
-      std::cerr << format("Error during generating keyframes: {}\n", res);
-    } else {
-      std::cout << format("Generated keyframe {}: {}_{}.png\n", i,
-                          current_temp_, i);
-    }
-  }
+  Gnuplot::generateDataBlock(temp_name, x, y);
 }
 
-cv::Mat interpolateFrames(const cv::Mat &prev, const cv::Mat &next, double t) {
+void AnimateGenerator::generateDatafile(std::span<Cartesian3D> points) {
+  vector<double> x = points |
+                     views::transform([](const auto &p) { return p[0]; }) |
+                     to<std::vector<double>>();
+  vector<double> y = points |
+                     views::transform([](const auto &p) { return p[1]; }) |
+                     to<std::vector<double>>();
+  vector<double> z = points |
+                     views::transform([](const auto &p) { return p[2]; }) |
+                     to<std::vector<double>>();
+
+  static constexpr double kScaleFactor = 1.1; // Scale factor for coordinates
+  min_x = *ranges::min_element(x) * kScaleFactor;
+  max_x = *ranges::max_element(x) * kScaleFactor;
+  min_y = *ranges::min_element(y) * kScaleFactor;
+  max_y = *ranges::max_element(y) * kScaleFactor;
+  min_z = *ranges::min_element(z) * kScaleFactor;
+  max_z = *ranges::max_element(z) * kScaleFactor;
+
+  auto temp_file = fs::path(current_temp_) / (name_ + ".dat");
+  auto temp_name = temp_file.string();
+
+  Gnuplot::generate3DDataBlock(temp_name, x, y, z);
+}
+
+void AnimateGenerator::blockWorkflow(int n) {
+  static constexpr int kBlockFactor = 50;
+  auto block_count = (n + kBlockFactor - 1) / kBlockFactor;
+  auto step = (n + block_count - 1) / block_count; // Calculate step size
+
+  writer_ = std::make_unique<cv::VideoWriter>(
+      format("{}.mp4", name_), cv::VideoWriter::fourcc('m', 'p', '4', 'v'),
+      kFPS, cv::Size(kWidth, kHeight)); // Assuming a fixed size for simplicity
+
+  for (int i = 0; i < block_count; ++i) {
+    int start = i * step;
+    int end = std::min(start + step, n - 1);
+    if (start < end) {
+      std::cout << format("Processing block {}: keyframes {} to {}\n", i, start,
+                          end - 1);
+      handleBlock(start, end);
+    }
+  }
+
+  writer_->release();
+}
+
+cv::Mat AnimateGenerator::interpolateFrames(const cv::Mat &prev,
+                                            const cv::Mat &next, double t) {
   using namespace cv;
   Mat prev_gray, next_gray;
   cvtColor(prev, prev_gray, COLOR_BGR2GRAY);
@@ -135,8 +162,53 @@ cv::Mat interpolateFrames(const cv::Mat &prev, const cv::Mat &next, double t) {
   return blended;
 }
 
-void mergeBlock(const std::vector<cv::Mat> &keyframes, int start, int end,
-                int interpolation_steps, cv::VideoWriter &writer) {
+void AnimateGenerator::generateKeyframeBlock(int start, int end) {
+  auto temp_data = fs::path(current_temp_) / (name_ + ".dat");
+  auto temp_name = temp_data.string();
+
+#pragma omp parallel for
+  for (int i = start; i < end; i++) {
+    Gnuplot plot;
+    plot.execute(format("set terminal pngcairo enhanced size 800,600\n"))
+        .execute(format("set output '{}/{}_{}.png'\n", current_temp_, name_, i))
+        .setFigureConfig({
+            .width = kWidth,
+            .height = kHeight,
+            .xrange = {min_x, max_x},
+            .yrange = {min_y, max_y},
+            .xlabel = "X",
+            .ylabel = "Y",
+            .grid = true,
+            .in3D = _3D,
+        })
+        .plot({
+            .index = 0,
+            .every = {1, i + 1},
+            .with = Gnuplot::PlotConfig::PlotType::Lines,
+            .style = "lt 1 lw 2 notitle",
+        })
+        .plot({
+            .index = 0,
+            .every = {i + 1, i + 1},
+            .with = Gnuplot::PlotConfig::PlotType::Points,
+            .style = "pt 5 ps 1 lc rgb 'red' notitle",
+        });
+    auto command = plot.generatePlotCommand(temp_name);
+    plot.execute(command);
+    // temp << command;
+    plot.execute("exit\n");
+    auto res = plot.wait();
+    if (res != 0) {
+      std::cerr << format("Error during generating keyframes: {}\n", res);
+    } else {
+      std::cout << format("Generated keyframe {}: {}_{}.png\n", i,
+                          current_temp_, i);
+    }
+  }
+}
+
+void AnimateGenerator::mergeBlock(const std::vector<cv::Mat> &keyframes,
+                                  int start, int end) const {
   using namespace cv;
   using namespace ranges;
   using std::format;
@@ -145,23 +217,23 @@ void mergeBlock(const std::vector<cv::Mat> &keyframes, int start, int end,
   // Static output_frames to avoid reallocation
   static vector<Mat> output_frames;
 
-  auto total = (end - start) * (interpolation_steps + 1);
+  auto total = (end - start) * (interpolation_steps_ + 1);
   output_frames.resize(total);
 
   std::cout << format(
       "Processing keyframes from {} to {} with {} interpolation steps\n", start,
-      end - 1, interpolation_steps);
+      end - 1, interpolation_steps_);
   std::cout << format("Total frames to generate: {}\n", total);
 
 #pragma omp parallel for
   for (int i = 0; i < end - start; ++i) {
-    auto base_idx = i * (interpolation_steps + 1);
-    output_frames[base_idx] = keyframes[i + start];
+    auto base_idx = i * (interpolation_steps_ + 1);
+    output_frames[base_idx] = keyframes[i];
 
-    for (int j = 1; j <= interpolation_steps; ++j) {
-      auto t = static_cast<double>(j) / (interpolation_steps + 1);
+    for (int j = 1; j <= interpolation_steps_; ++j) {
+      auto t = static_cast<double>(j) / (interpolation_steps_ + 1);
       output_frames[base_idx + j] =
-          interpolateFrames(keyframes[i + start], keyframes[i + start + 1], t);
+          interpolateFrames(keyframes[i], keyframes[i + 1], t);
     }
     std::cout << format("Interpolated frames between keyframes {} and {}\n",
                         i + start, i + start + 1);
@@ -169,56 +241,51 @@ void mergeBlock(const std::vector<cv::Mat> &keyframes, int start, int end,
 
   for (auto &&[idx, frame] : views::enumerate(output_frames)) {
     if (frame.empty()) {
-      if (idx % (interpolation_steps + 1) == 0) {
-        std::cerr << format("Warning: Keyframe {} is empty, skipping.\n", idx);
+      if (idx % (interpolation_steps_ + 1) == 0) {
+        std::cerr << format("Warning: Keyframe {} is empty, skipping.\n",
+                            idx + start);
       } else {
         std::cerr << format(
             "Warning: Interpolated frame {} is empty, skipping.\n", idx);
       }
       continue;
     }
-    writer.write(frame);
+    writer_->write(frame);
   }
 }
 
-void AnimateGenerator::mergeKeyframes(int n) const {
-  using namespace cv;
-  using namespace ranges;
-  using std::format;
-  using std::vector;
-  vector<Mat> keyframes =
-      views::iota(0, n) | views::transform([this](int i) {
-        return fs::path(current_temp_) / format("{}_{}.png", name_, i);
+void AnimateGenerator::handleBlock(int start, int end) {
+  using cv::Mat;
+
+  generateKeyframeBlock(start, end + 1);
+  cout << format("Keyframes generated from {} to {}\n", start, end - 1);
+
+  vector<string> filenames =
+      views::iota(start, end + 1) | views::transform([this](int i) {
+        return format("{}/{}_{}.png", current_temp_, name_, i);
       }) |
-      views::transform(
-          [this](const auto &filename) { return imread(filename.string()); }) |
-      ranges::to<std::vector<Mat>>();
+      to<vector<string>>();
 
-  auto size = keyframes[0].size();
-  VideoWriter writer(format("{}.mp4", name_),
-                     VideoWriter::fourcc('m', 'p', '4', 'v'), 30, size);
+  vector<Mat> keyframes = filenames |
+                          views::transform([](const string &filename) {
+                            return cv::imread(filename);
+                          }) |
+                          to<std::vector<Mat>>();
 
-  auto interpolation_steps =
-      std::min(static_cast<int>(std::ceil((time_ * 30.0 - n) / (n - 1))), 1);
+  cout << format("Loaded {} keyframes from temporary files\n",
+                 keyframes.size());
 
-  static constexpr int kBlockFactor = 50;
-  auto block_count = (n + kBlockFactor - 1) / kBlockFactor;
-  auto step = (n + block_count - 1) / block_count; // Calculate step size
+  mergeBlock(keyframes, start, end);
+  cout << format("Merged keyframes from {} to {}\n", start, end - 1);
 
-  for (int i = 0; i < block_count; ++i) {
-    int start = i * step;
-    int end = std::min(start + step, n - 1);
-    if (start < end) {
-      std::cout << format("Processing block {}: keyframes {} to {}\n", i, start,
-                          end - 1);
-      mergeBlock(keyframes, start, end, interpolation_steps, writer);
+  for (auto &&filename : filenames) {
+    try {
+      fs::remove(filename);
+      std::cout << format("Removed temporary file: {}\n", filename);
+    } catch (const fs::filesystem_error &e) {
+      std::cerr << format("Error removing file {}: {}\n", filename, e.what());
     }
   }
-
-  // Write the last keyframe
-  writer.write(keyframes.back());
-
-  writer.release();
 }
 
 void AnimateGenerator::cleanup() {

@@ -42,6 +42,7 @@ public:
   private:
     using vector_type = std::vector<Element>;
     using vector_iter = typename vector_type::iterator;
+    using const_vector_iter = typename vector_type::const_iterator;
 
   public:
     using iterator_category = std::random_access_iterator_tag;
@@ -53,12 +54,24 @@ public:
     iterator(BaseVerletIntegrator *container, size_t index)
         : container_(container), index_(index) {}
 
-    iterator(BaseVerletIntegrator *container, vector_iter iter)
+    iterator(BaseVerletIntegrator *container, const vector_iter iter)
         : container_(container),
           index_(std::distance(container->elements_.begin(), iter)) {}
 
     iterator(BaseVerletIntegrator *container, pointer ptr)
         : container_(container),
+          index_(std::distance(container->elements_.data(), ptr)) {}
+
+    iterator(const BaseVerletIntegrator *container, size_t index)
+        : container_(const_cast<BaseVerletIntegrator *>(container)),
+          index_(index) {}
+
+    iterator(const BaseVerletIntegrator *container, const_vector_iter iter)
+        : container_(const_cast<BaseVerletIntegrator *>(container)),
+          index_(std::distance(container->elements_.begin(), iter)) {}
+
+    iterator(const BaseVerletIntegrator *container, pointer ptr)
+        : container_(const_cast<BaseVerletIntegrator *>(container)),
           index_(std::distance(container->elements_.data(), ptr)) {}
 
     reference operator*() const { return container_->elements_[index_]; }
@@ -270,7 +283,7 @@ private:
     auto center = center_it->position.toCartesian();
     auto acc = CartesianVector{};
 
-    for (auto it = this->elements_.begin(); it != this->elements_.end(); ++it) {
+    for (auto it = this->begin(); it != this->end(); ++it) {
       if (it == center_it)
         continue; // Skip self
 

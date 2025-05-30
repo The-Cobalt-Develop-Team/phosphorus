@@ -12,6 +12,7 @@
 #include "phosphorus/Field.h"
 #include "phosphorus/Gnuplot.h"
 #include "phosphorus/Particle.h"
+#include "phosphorus/ScitificConstants.h"
 #include "phosphorus/SignalSlot.h"
 #include "phosphorus/TypeTraits.h"
 #include "phosphorus/Vector.h"

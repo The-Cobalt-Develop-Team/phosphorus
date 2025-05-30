@@ -176,6 +176,21 @@ void Gnuplot::generateDataBlock(const std::string &filename,
   file.close();
 }
 
+void Gnuplot::generate3DDataBlock(const std::string &filename,
+                                  std::span<double> x, std::span<double> y,
+                                  std::span<double> z) {
+  using std::format;
+  std::fstream file(filename, std::ios::app);
+  if (!file.is_open()) {
+    throw GnuplotException("Failed to open file: " + filename);
+  }
+  for (auto [x, y, z] : ranges::views::zip(x, y, z)) {
+    file << format("{:.9f} {:.9f} {:.9f}\n", x, y, z);
+  }
+  file << "\n\n"; // End of data block
+  file.close();
+}
+
 std::string Gnuplot::generateFigureCommand() const {
   using std::format;
   static constexpr std::pair kDefaultPair = {0.0, 0.0};
@@ -242,7 +257,10 @@ std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
     command << "set grid\n";
   }
 
-  command << format("plot ");
+  if (!figure_config_.in3D)
+    command << "plot ";
+  else
+    command << "splot ";
   for (auto &&[index, plot_config] : ranges::views::enumerate(plot_configs_)) {
     if (index > 0) {
       command << ", ";
@@ -253,7 +271,10 @@ std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
     } else {
       command << format("index {} ", index); // Use the index from the loop
     }
-    command << format("using 1:2 ");
+    if (!figure_config_.in3D)
+      command << format("using 1:2 ");
+    else
+      command << format("using 1:2:3 ");
     if (plot_config.every != std::pair<int, int>{0, 0}) {
       command << format("every ::{}::{} ", plot_config.every.first,
                         plot_config.every.second);
@@ -272,7 +293,6 @@ std::string Gnuplot::generatePlotCommand(const std::string &temp_file) const {
       command << format("smooth {} ",
                         PlotConfig::smoothTypeToString(plot_config.smooth));
     }
-    // generateDataBlock(temp_file, plot_config.x, plot_config.y);
   }
   command << "\n"; // End of plot command
   return command.str();
@@ -299,7 +319,8 @@ Gnuplot &Gnuplot::savefig(const std::string &filename) {
   }
 
   std::stringstream command;
-  command << format("set terminal pngcairo enhanced size 800,600\n");
+  command << format("set terminal pngcairo enhanced size {},{}\n",
+                    figure_config_.width, figure_config_.height);
   command << format("set output '{}'\n", output);
   command << generatePlotCommand(guard.filename_);
   command << "replot\n"; // Replot to save the current data

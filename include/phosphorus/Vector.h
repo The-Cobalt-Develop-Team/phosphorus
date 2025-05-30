@@ -106,6 +106,19 @@ public:
     return (1.0 / scalar) * lhs;
   }
 
+  // TODO: This is just for convenience. We need to fix some issues with it.
+  friend Scalar operator*(const Vector &lhs, const Vector &rhs) {
+    Scalar result = 0;
+    for (size_t i = 0; i < kDimension; ++i) {
+      result += lhs.components_[i] * rhs.components_[i];
+    }
+    return result;
+  }
+
+  Scalar norm() const {
+    return std::sqrt(*this * *this);
+  }
+
   Scalar operator[](size_t index) const {
     assert(index < kDimension);
     return components_[index];
