@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
   auto earth_it =
       system.pushParticle(earth, initial_position, initial_velocity);
 
-  auto step = DAY / 4;                 // 1/4 of a day per step
+  auto step = DAY / 2;                 // 1/4 of a day per step
   auto n = static_cast<int>(T / step); // One year in steps
 
   vector<Cartesian2D> result;

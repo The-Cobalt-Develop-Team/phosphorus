@@ -98,6 +98,12 @@ int main() {
     system.step(step);
   }
 
+  AnimateGenerator animator("ThreeBodySystem", 4);
+  for (auto &&result_it : result) {
+    animator.pushPoints(result_it);
+  }
+  animator.generate("ThreeBodySystem", 60);
+
   Gnuplot plot;
   plot.setFigureConfig({
       .xlabel = "X (m)",
@@ -105,19 +111,22 @@ int main() {
       .grid = true,
   });
 
+  vector<vector<double>> x_data(config.particles.size());
+  vector<vector<double>> y_data(config.particles.size());
+
   for (auto &&[i, result_it] : views::enumerate(result)) {
-    vector<double> x =
+    x_data[i] =
         result_it |
         views::transform([](const auto &p) { return p[0] / Constants::AU; }) |
         to<std::vector<double>>();
-    vector<double> y =
+    y_data[i] =
         result_it |
         views::transform([](const auto &p) { return p[1] / Constants::AU; }) |
         to<std::vector<double>>();
 
     plot.plot({
-        .x = x,
-        .y = y,
+        .x = x_data[i],
+        .y = y_data[i],
         .with = Gnuplot::PlotConfig::PlotType::Lines,
         .title = format("Particle {} (AU)", i + 1),
     });

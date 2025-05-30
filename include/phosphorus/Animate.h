@@ -28,14 +28,16 @@ public:
   void generate(const std::string &filename, std::span<Cartesian2D> points,
                 double time);
 
-  void generate(const std::string &filename, std::span<Cartesian3D> points,
-                double time);
+  void pushPoints(std::span<Cartesian2D> points) {
+    point_list_.emplace_back(points);
+  }
+
+  void generate(const std::string &filename, double time);
 
 private:
   void setup();
-  void blockWorkflow(int n);
+  void blockWorkflow();
   void generateDatafile(std::span<Cartesian2D> points);
-  void generateDatafile(std::span<Cartesian3D> points);
   void generateKeyframeBlock(int start, int end);
   void mergeBlock(const std::vector<cv::Mat> &keyframes, int start,
                   int end) const;
@@ -62,9 +64,9 @@ private:
   boost::asio::thread_pool pool_{4};
   std::string current_temp_;
   std::unique_ptr<cv::VideoWriter> writer_;
-  int interpolation_steps_ = 1; // Default interpolation steps
+  std::vector<std::span<Cartesian2D>> point_list_;
+  int interpolation_steps_ = 0; // Default interpolation steps
   double min_x = 0, max_x = 0, min_y = 0, max_y = 0, min_z = 0, max_z = 0;
-  bool _3D = false;
 };
 
 } // namespace phosphorus

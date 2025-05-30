@@ -28,27 +28,31 @@ void AnimateGenerator::generate(const std::string &filename,
   try {
     name_ = filename;
     time_ = time;
+    point_list_ = {points};
     setup();
     generateDatafile(points);
-    blockWorkflow(points.size());
+    blockWorkflow();
     cleanup();
   } catch (std::exception &e) {
     std::cerr << "Error during setup: " << e.what() << '\n';
   }
 }
 
-void AnimateGenerator::generate(const std::string &filename,
-                                std::span<Cartesian3D> points, double time) {
+void AnimateGenerator::generate(const std::string &filename, double time) {
+  if (point_list_.empty()) {
+    throw std::runtime_error("No points to generate animation");
+  }
   try {
     name_ = filename;
     time_ = time;
-    _3D = true;
     setup();
-    generateDatafile(points);
-    blockWorkflow(points.size());
+    for (const auto &points : point_list_) {
+      generateDatafile(points);
+    }
+    blockWorkflow();
     cleanup();
   } catch (std::exception &e) {
-    std::cerr << "Error during setup: " << e.what() << '\n';
+    std::cerr << format("Error during generation: {}", e.what());
   }
 }
 
@@ -70,41 +74,17 @@ void AnimateGenerator::generateDatafile(std::span<Cartesian2D> points) {
                      to<std::vector<double>>();
 
   static constexpr double kScaleFactor = 1.1; // Scale factor for coordinates
-  min_x = *ranges::min_element(x) * kScaleFactor;
-  max_x = *ranges::max_element(x) * kScaleFactor;
-  min_y = *ranges::min_element(y) * kScaleFactor;
-  max_y = *ranges::max_element(y) * kScaleFactor;
+  min_x = min(*ranges::min_element(x) * kScaleFactor, min_x);
+  max_x = max(*ranges::max_element(x) * kScaleFactor, max_x);
+  min_y = min(*ranges::min_element(y) * kScaleFactor, min_y);
+  max_y = max(*ranges::max_element(y) * kScaleFactor, max_y);
 
   Gnuplot::generateDataBlock(temp_name, x, y);
 }
 
-void AnimateGenerator::generateDatafile(std::span<Cartesian3D> points) {
-  vector<double> x = points |
-                     views::transform([](const auto &p) { return p[0]; }) |
-                     to<std::vector<double>>();
-  vector<double> y = points |
-                     views::transform([](const auto &p) { return p[1]; }) |
-                     to<std::vector<double>>();
-  vector<double> z = points |
-                     views::transform([](const auto &p) { return p[2]; }) |
-                     to<std::vector<double>>();
-
-  static constexpr double kScaleFactor = 1.1; // Scale factor for coordinates
-  min_x = *ranges::min_element(x) * kScaleFactor;
-  max_x = *ranges::max_element(x) * kScaleFactor;
-  min_y = *ranges::min_element(y) * kScaleFactor;
-  max_y = *ranges::max_element(y) * kScaleFactor;
-  min_z = *ranges::min_element(z) * kScaleFactor;
-  max_z = *ranges::max_element(z) * kScaleFactor;
-
-  auto temp_file = fs::path(current_temp_) / (name_ + ".dat");
-  auto temp_name = temp_file.string();
-
-  Gnuplot::generate3DDataBlock(temp_name, x, y, z);
-}
-
-void AnimateGenerator::blockWorkflow(int n) {
+void AnimateGenerator::blockWorkflow() {
   static constexpr int kBlockFactor = 50;
+  auto n = point_list_[0].size(); // Assuming all spans have the same size
   auto block_count = (n + kBlockFactor - 1) / kBlockFactor;
   auto step = (n + block_count - 1) / block_count; // Calculate step size
 
@@ -112,9 +92,12 @@ void AnimateGenerator::blockWorkflow(int n) {
       format("{}.mp4", name_), cv::VideoWriter::fourcc('m', 'p', '4', 'v'),
       kFPS, cv::Size(kWidth, kHeight)); // Assuming a fixed size for simplicity
 
-  for (int i = 0; i < block_count; ++i) {
-    int start = i * step;
-    int end = std::min(start + step, n - 1);
+  // TODO: Fix the interpolation algorithm.
+  // interpolation_steps_ = static_cast<int>((kFPS * time_ - n) / (n - 1));
+
+  for (auto i = 0; i < block_count; ++i) {
+    auto start = i * step;
+    auto end = std::min(start + step, n - 1);
     if (start < end) {
       std::cout << format("Processing block {}: keyframes {} to {}\n", i, start,
                           end - 1);
@@ -179,20 +162,21 @@ void AnimateGenerator::generateKeyframeBlock(int start, int end) {
             .xlabel = "X",
             .ylabel = "Y",
             .grid = true,
-            .in3D = _3D,
-        })
-        .plot({
-            .index = 0,
-            .every = {1, i + 1},
-            .with = Gnuplot::PlotConfig::PlotType::Lines,
-            .style = "lt 1 lw 2 notitle",
-        })
-        .plot({
-            .index = 0,
-            .every = {i + 1, i + 1},
-            .with = Gnuplot::PlotConfig::PlotType::Points,
-            .style = "pt 5 ps 1 lc rgb 'red' notitle",
         });
+    for (int idx = 0; idx < point_list_.size(); ++idx) {
+      plot.plot({
+                    .index = idx,
+                    .every = {1, i + 1},
+                    .with = Gnuplot::PlotConfig::PlotType::Lines,
+                    .style = "lw 2 notitle",
+                })
+          .plot({
+              .index = idx,
+              .every = {i + 1, i + 1},
+              .with = Gnuplot::PlotConfig::PlotType::Points,
+              .style = "pt 5 ps 1 lc rgb 'red' notitle",
+          });
+    }
     auto command = plot.generatePlotCommand(temp_name);
     plot.execute(command);
     // temp << command;
