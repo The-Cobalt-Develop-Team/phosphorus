@@ -16,7 +16,6 @@ target_link_libraries(
         phosphorus
         PUBLIC
         Boost::process
-        morphologica
         range-v3
         OpenMP::OpenMP_CXX
         opencv_core
