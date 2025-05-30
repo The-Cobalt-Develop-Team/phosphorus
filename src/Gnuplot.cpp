@@ -31,8 +31,23 @@ class Gnuplot::GnuplotImpl {
 public:
   static constexpr const char *kGnuplotExecutable = "gnuplot";
 
-  GnuplotImpl() = default;
-  ~GnuplotImpl() { stop(); }
+  GnuplotImpl()
+      : ctx_(std::make_unique<asio::io_context>()), //
+        child_stdin_(*ctx_)                         //
+  {
+    command_ = bp::environment::find_executable(kGnuplotExecutable);
+  }
+  ~GnuplotImpl() {
+    child_stdin_.close();
+    child_stdin_.release();
+    stop();
+    ctx_->stop();
+    while (!ctx_->stopped()) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    ctx_.reset();
+    gnuplot_.reset();
+  }
 
   GnuplotImpl(const GnuplotImpl &) = delete;
   GnuplotImpl &operator=(const GnuplotImpl &) = delete;
@@ -46,14 +61,16 @@ public:
 
   auto start() -> GnuplotImpl & {
     // Reset the gnuplot_ pointer.
-    auto ptr = new bp::process{ctx_,     // io_context
-                               command_, // gnuplot executable path
-                               {},       // subprocess arguments
-                               bp::process_stdio{
-                                   .in = child_stdin_,   // stdin of subprocess
-                                   .out = child_stdout_, // stdout of subprocess
-                                   .err = child_stderr_  // stderr of subprocess
-                               }};
+    auto ptr = new bp::process{
+        *ctx_,    // io_context
+        command_, // gnuplot executable path
+        {},       // subprocess arguments
+        bp::process_stdio{
+            .in = child_stdin_, // stdin of subprocess
+            .out = nullptr,     // stdout of subprocess
+            .err = nullptr      // stderr of subprocess
+        },
+    };
 
     gnuplot_.reset(ptr);
 
@@ -70,14 +87,7 @@ public:
     if (!running()) {
       throw GnuplotException("Gnuplot process is not running");
     }
-
-    child_stdin_.async_write_some(
-        asio::buffer(command.data(), command.size()),
-        [this](const boost::system::error_code &ec, std::size_t) {
-          if (ec) {
-            throw GnuplotException("Gnuplot error: " + ec.message());
-          }
-        });
+    child_stdin_.write_some(asio::buffer(command.data(), command.size()));
   }
 
   [[nodiscard]] bool running() const {
@@ -93,24 +103,27 @@ private:
   // Use a custom deleter for the gnuplot process to ensure it is terminated
   struct BPProcessDeleter {
     void operator()(bp::process *proc) const {
-      if (error_code ec; proc && proc->running(ec)) {
-        proc->terminate();
-        delete proc;
+      if (proc) {
+        if (error_code ec; proc->running(ec)) {
+          proc->terminate();
+        }
+        delete proc; // Delete the process pointer
       }
     }
   };
   using ProcessPtr = std::unique_ptr<bp::process, BPProcessDeleter>;
+  // using ProcessPtr = std::unique_ptr<bp::process>;
 
-  asio::io_context ctx_{};
-  asio::writable_pipe child_stdin_{ctx_};
-  asio::readable_pipe child_stdout_{ctx_};
-  asio::readable_pipe child_stderr_{ctx_};
+  std::unique_ptr<asio::io_context> ctx_;
+  asio::writable_pipe child_stdin_;
   ProcessPtr gnuplot_ = nullptr;
-  path command_ = bp::environment::find_executable(kGnuplotExecutable);
+  path command_; // Path to the gnuplot executable
 };
 
 // The implementation of Gnuplot methods
-Gnuplot::Gnuplot() : impl_(std::make_unique<GnuplotImpl>()) { impl_->start(); }
+Gnuplot::Gnuplot() : impl_(std::make_unique<GnuplotImpl>()) { //
+  impl_->start();                                             //
+}
 
 Gnuplot::~Gnuplot() {
   if (impl_) {
@@ -135,6 +148,14 @@ Gnuplot &Gnuplot::execute(const std::string &command) {
   }
   impl_->execute(commandPreprocessor(command));
   return *this;
+}
+
+void Gnuplot::release() {
+  auto newImpl = std::make_unique<GnuplotImpl>();
+  if (impl_) {
+    impl_->stop(); // Stop the current gnuplot process
+  }
+  impl_ = std::move(newImpl);
 }
 
 std::string Gnuplot::commandPreprocessor(const std::string &command) {

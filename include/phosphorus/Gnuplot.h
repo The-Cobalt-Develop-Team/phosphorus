@@ -7,6 +7,7 @@
 
 #include "phosphorus/Coordinate.h"
 #include <iostream>
+#include <memory>
 #include <span>
 #include <string>
 #include <vector>
@@ -109,6 +110,7 @@ public:
   Gnuplot &operator=(Gnuplot &&other) noexcept;
 
   Gnuplot &execute(const std::string &command);
+  void release();
 
   Gnuplot &setFigureConfig(const FigureConfig &config) {
     figure_config_ = config;

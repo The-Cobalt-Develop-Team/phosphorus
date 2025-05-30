@@ -163,6 +163,7 @@ void AnimateGenerator::generateKeyframeBlock(int start, int end) {
             .ylabel = "Y",
             .grid = true,
         });
+
     for (int idx = 0; idx < point_list_.size(); ++idx) {
       plot.plot({
                     .index = idx,
@@ -177,17 +178,17 @@ void AnimateGenerator::generateKeyframeBlock(int start, int end) {
               .style = "pt 5 ps 1 lc rgb 'red' notitle",
           });
     }
+
     auto command = plot.generatePlotCommand(temp_name);
     plot.execute(command);
-    // temp << command;
     plot.execute("exit\n");
     auto res = plot.wait();
     if (res != 0) {
-      std::cerr << format("Error during generating keyframes: {}\n", res);
-    } else {
-      std::cout << format("Generated keyframe {}: {}_{}.png\n", i,
-                          current_temp_, i);
+      std::cerr << format("Error generating keyframe {}: {}\n", i, res);
+      continue;
     }
+    std::cout << format("Generated keyframe {}: {}_{}.png\n", i, current_temp_,
+                        i);
   }
 }
 

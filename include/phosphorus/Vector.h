@@ -6,6 +6,7 @@
 #define PHOSPHORUS_INCLUDE_PHOSPHORUS_CARTESIANVECTOR_H
 
 #include <cassert>
+#include <cmath>
 #include <initializer_list>
 #include <ostream>
 
@@ -115,9 +116,7 @@ public:
     return result;
   }
 
-  Scalar norm() const {
-    return std::sqrt(*this * *this);
-  }
+  Scalar norm() const { return std::sqrt(*this * *this); }
 
   Scalar operator[](size_t index) const {
     assert(index < kDimension);

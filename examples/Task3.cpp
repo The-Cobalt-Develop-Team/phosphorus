@@ -78,7 +78,7 @@ int main() {
   using Iter = IntegratorType::iterator;
   GravityIntegrator<Cartesian2D, CommonParticle> system;
 
-  const Config &config = config2; // Change to config2 for the second test
+  const Config &config = config1; // Change to config2 for the second test
   auto step = config.step;
   auto n = config.n;
 
@@ -102,7 +102,11 @@ int main() {
   for (auto &&result_it : result) {
     animator.pushPoints(result_it);
   }
-  animator.generate("ThreeBodySystem", 60);
+  try {
+    animator.generate("ThreeBodySystem", 60);
+  } catch (const std::exception &e) {
+    std::cerr << "Error generating animation: " << e.what() << '\n';
+  }
 
   Gnuplot plot;
   plot.setFigureConfig({
