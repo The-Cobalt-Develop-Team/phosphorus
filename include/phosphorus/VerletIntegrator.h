@@ -2,6 +2,11 @@
 // Created by Renatus Madrigal on 5/23/2025.
 //
 
+/**
+ * @file VerletIntegrator.h
+ * @brief Header file for the Verlet integrator classes.
+ */
+
 #ifndef PHOSPHORUS_INCLUDE_PHOSPHORUS_VERLETINTEGRATOR_H
 #define PHOSPHORUS_INCLUDE_PHOSPHORUS_VERLETINTEGRATOR_H
 
@@ -19,7 +24,7 @@ namespace phosphorus {
  * @brief Base Verlet integrator for particle simulation.
  * @tparam Impl The implementation type.
  * @tparam Coord The coordinate system used for the simulation.
- >* @tparam ParticleType The type of the particle to be integrated.
+ * @tparam ParticleType The type of the particle to be integrated.
  */
 template <typename Impl, typename Coord, typename ParticleType>
   requires IsCoordinateVec<Coord> && Massive<ParticleType>
@@ -210,7 +215,7 @@ protected:
 };
 
 /**
- * @brief Verlet integrator for particle simulation.
+ * @brief Verlet integrator for particle simulation in a force field.
  * @tparam Field The field used for the simulation.
  * @tparam Coord The coordinate system used for the simulation.
  * @tparam ParticleType The type of the particle to be integrated.
