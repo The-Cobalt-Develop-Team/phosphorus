@@ -32,6 +32,9 @@ We use the following libraries:
 Besides, `gnuplot` is required for visualization, but is not as a library dependency. Please make sure that `gnuplot` is
 in your `PATH` environment variable.
 
+**NOTE: We use `boost.process` to handle subprocesses, but it is not installed on `ubuntu` by default, even
+if `libboost-all-dev` package is installed. It would be better to manually install `boost.process`.**
+
 ### Building - CMake
 
 We use CMake to build the project. You can build it using the following commands:

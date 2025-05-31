@@ -1,8 +1,13 @@
-cmake_minimum_required(VERSION 3.30)
+cmake_minimum_required(VERSION 3.28)
 project(phosphorus LANGUAGES CXX)
+
+cmake_policy(SET CMP0167 NEW)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+add_definitions(-D_WIN32_WINNT=0x0601) # Set minimum Windows version to Windows 7
+add_definitions(-DWIN32_LEAN_AND_MEAN) # Exclude rarely-used Windows headers
 
 include(cmake/CMakeUtilities.cmake)
 
