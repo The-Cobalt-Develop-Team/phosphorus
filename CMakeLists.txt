@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(phosphorus LANGUAGES CXX)
 
-cmake_policy(SET CMP0167 NEW)
+if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.30)
+    cmake_policy(SET CMP0167 NEW)
+endif ()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
